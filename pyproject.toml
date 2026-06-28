@@ -38,9 +38,6 @@ classifiers = [
     "Topic :: Utilities",
 ]
 urls = { repository = "https://github.com/AMVerge-team/AMVerge-CLI" }
-
-[tool.pypi]
-logo = "https://raw.githubusercontent.com/AMVerge-team/AMVerge-CLI/master/assets/LogoAMVerge.png"
 dependencies = [
     "typer>=0.12",
     "rich>=13",
