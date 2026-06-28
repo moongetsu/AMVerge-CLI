@@ -34,6 +34,9 @@ from .core.thumbnail_generator import ThumbnailGenerator
 # -- Similarity checker -------------------------------------------------
 from .core.similarity_checker import SimilarityChecker
 
+# -- Image crop ----------------------------------------------------------
+from .core.image_crop import ImageCrop
+
 # -- Binaries -----------------------------------------------------------
 from .core.binaries import get_binary, get_ffmpeg, get_ffprobe
 
@@ -135,6 +138,8 @@ __all__ = [
     "ThumbnailGenerator",
     # Similarity checker
     "SimilarityChecker",
+    # Image crop
+    "ImageCrop",
     # Binaries
     "get_binary", "get_ffmpeg", "get_ffprobe",
     # Video

@@ -13,6 +13,7 @@ from .scene_exporter import SceneExporter
 from .scene_cache import SceneCache
 from .thumbnail_generator import ThumbnailGenerator
 from .similarity_checker import SimilarityChecker
+from .image_crop import ImageCrop
 from .detection.keyframe import detect_cuts_by_keyframe
 from .detection.edge import detect_cuts_by_edge
 from .diagnostics import get_gpu_info, get_versions
