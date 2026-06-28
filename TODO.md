@@ -124,15 +124,9 @@ Wraps: `build_video_cache_prefix()`, manual .npy file I/O.
 
 ---
 
-## 9. TransNetV2 Constants
+## 9. TransNetV2 ✅
 
-Already exported. Optional wrapper:
-
-```python
-from amverge import TransNetConfig
-config = TransNetConfig()
-```
-
+~~`TransNetConfig` class~~ Done. `core/transnet_config.py`, frozen dataclass exported from `amverge`.
 ---
 
 ## 10. Clean Up Examples
@@ -154,5 +148,5 @@ config = TransNetConfig()
 | 6 | `SimilarityChecker` | ✅ done |
 | 7 | `ImageCrop` rename | ✅ done |
 | 8 | `check_environment()` | ✅ done |
-| 9 | `TransNetConfig` | pending |
+| 9 | `TransNetConfig` | ✅ done |
 | 10 | Clean examples | pending |
