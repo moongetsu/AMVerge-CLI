@@ -4,81 +4,124 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 from pathlib import Path
 
-from rich.prompt import Confirm, FloatPrompt, IntPrompt, Prompt
+from rich.align import Align
+from rich.columns import Columns
+from rich.panel import Panel
+from rich.prompt import Confirm, Prompt
 from rich.rule import Rule
+from rich.table import Table
+from rich import box
 
-from .ui import banner, console, err, make_progress, make_table, ok, fail, dim, THEME
+from .ui import console, err, make_progress, make_table, ok, fail, dim, THEME
 from .__version__ import __version__
 
 
 # ---------------------------------------------------------------------------
-# Styled prompt helpers
+# Low-level input helpers
 # ---------------------------------------------------------------------------
 
-def _prompt(label: str, default: str = "", password: bool = False) -> str:
-    hint = f"[muted][{default}][/muted] " if default else ""
-    return Prompt.ask(
-        f"  [accent]›[/] [label]{label}[/] {hint}",
-        console=err,
-        default=default,
-        password=password,
-    ).strip()
+def _ask(label: str, default: str = "", password: bool = False) -> str:
+    hint = f" [muted]\[{default}][/]" if default else ""
+    try:
+        val = Prompt.ask(
+            f"  [accent]›[/]  [label]{label}[/]{hint}",
+            console=err,
+            default=default,
+            password=password,
+        )
+    except (EOFError, KeyboardInterrupt):
+        err.print()
+        raise KeyboardInterrupt
+    return (val or default).strip()
 
 
-def _prompt_path(label: str, default: str = "", must_exist: bool = False) -> str:
+def _ask_path(label: str, default: str = "", must_exist: bool = False) -> str:
     while True:
-        raw = _prompt(label, default)
-        if not raw:
-            raw = default
+        raw = _ask(label, default)
         if must_exist and raw and not Path(raw).exists():
-            err.print(f"  [error]✗[/] not found: {raw}")
+            err.print(f"  [error]  not found:[/] {raw}")
             continue
         return raw
 
 
-def _confirm(label: str, default: bool = True) -> bool:
-    hint = "[muted][Y/n][/muted]" if default else "[muted][y/N][/muted]"
-    return Confirm.ask(
-        f"  [accent]›[/] [label]{label}[/] {hint}",
-        console=err,
-        default=default,
-    )
+def _ask_yn(label: str, default: bool = True) -> bool:
+    hint = "Y/n" if default else "y/N"
+    raw = _ask(label, hint).lower()
+    return raw in ("y", "yes", "1", "true", hint.lower())
 
 
-def _float_prompt(label: str, default: float, lo: float, hi: float) -> float:
+def _ask_float(label: str, default: float, lo: float, hi: float) -> float:
     while True:
-        raw = _prompt(label, str(default))
+        raw = _ask(label, str(default))
         try:
             v = float(raw)
             if lo <= v <= hi:
                 return v
         except ValueError:
             pass
-        err.print(f"  [error]✗[/] enter a number between {lo} and {hi}")
+        err.print(f"  [error]  enter a number {lo}–{hi}[/]")
 
 
-def _int_prompt(label: str, default: int, lo: int, hi: int) -> int:
+def _ask_int(label: str, default: int, lo: int, hi: int) -> int:
     while True:
-        raw = _prompt(label, str(default))
+        raw = _ask(label, str(default))
         try:
             v = int(raw)
             if lo <= v <= hi:
                 return v
         except ValueError:
             pass
-        err.print(f"  [error]✗[/] enter an integer between {lo} and {hi}")
+        err.print(f"  [error]  enter an integer {lo}–{hi}[/]")
 
 
-def _choice(label: str, choices: list[str], default: str) -> str:
-    opts = " · ".join(f"[accent]{c}[/]" if c == default else c for c in choices)
-    err.print(f"  [accent]›[/] [label]{label}[/]  {opts}")
+def _ask_choice(label: str, choices: list[str], default: str) -> str:
+    opts = "  ".join(
+        f"[accent bold]{c}[/]" if c == default else f"[muted]{c}[/]"
+        for c in choices
+    )
+    err.print(f"  [accent]›[/]  [label]{label}[/]  {opts}  [muted]\[{default}][/]")
     while True:
-        raw = _prompt("", default).lower()
+        raw = _ask("", default).lower()
         if raw in choices:
             return raw
-        err.print(f"  [error]✗[/] choose: {' / '.join(choices)}")
+        err.print(f"  [error]  choose: {' / '.join(choices)}[/]")
+
+
+# ---------------------------------------------------------------------------
+# Visual helpers
+# ---------------------------------------------------------------------------
+
+def _header() -> None:
+    os.system("cls" if os.name == "nt" else "clear")
+    err.print()
+    err.print(
+        Panel(
+            f"[white bold]AM[/][accent bold]Verge[/]  [muted]CLI[/]  [muted]v{__version__}[/]",
+            border_style="accent",
+            padding=(0, 2),
+            expand=False,
+        )
+    )
+    err.print()
+
+
+def _section(title: str, step: str | None = None) -> None:
+    step_str = f"[muted]{step}[/]  " if step else ""
+    err.print(Rule(f"  {step_str}[accent]{title}[/]  ", style="muted", align="left"))
+    err.print()
+
+
+def _summary_panel(rows: list[tuple[str, str]]) -> None:
+    t = Table(box=None, show_header=False, padding=(0, 2))
+    t.add_column("key", style="muted", width=14)
+    t.add_column("val", style="label")
+    for k, v in rows:
+        t.add_row(k, v)
+    err.print(Panel(t, border_style="muted", title="[muted]summary[/]", title_align="left"))
+    err.print()
 
 
 # ---------------------------------------------------------------------------
@@ -88,26 +131,49 @@ def _choice(label: str, choices: list[str], default: str) -> str:
 def _wizard_detect() -> None:
     from .pipeline import detect_scenes, DetectResult
 
-    err.print()
-    err.print(Rule("[accent]detect[/]", style="muted"))
-    err.print()
+    _header()
+    _section("detect", "01/05")
+    err.print("  [muted]Split a video into scenes at cut boundaries.[/]\n")
 
-    video = _prompt_path("video path", must_exist=True)
+    video = _ask_path("video path", must_exist=True)
     if not video:
         return
-    output = _prompt_path("output dir", "[auto]")
-    output = None if output in ("", "[auto]") else output
-
-    method = _choice("method", ["keyframe", "edge"], "keyframe")
-    min_dur = _float_prompt("min duration (s)", 0.25, 0.01, 60.0)
-    thumbs = _confirm("generate thumbnails", True)
-    similarity = _confirm("check similarity", True) if thumbs else False
-    workers = _int_prompt("thumbnail workers", 4, 1, 32) if thumbs else 4
-
-    err.print()
-    err.print(Rule(style="muted"))
     err.print()
 
+    _section("output", "02/05")
+    output = _ask_path("output dir  [muted](leave blank for auto)[/]", "")
+    output = output or None
+    err.print()
+
+    _section("detection", "03/05")
+    method = _ask_choice("method", ["keyframe", "edge"], "keyframe")
+    err.print(f"  [muted]  keyframe — fast, cuts at I-frame boundaries[/]")
+    err.print(f"  [muted]  edge     — accurate, needs opencv  [pip install amverge-cli[edge]][/]\n")
+    min_dur = _ask_float("min scene duration (s)", 0.25, 0.01, 60.0)
+    err.print()
+
+    _section("thumbnails & similarity", "04/05")
+    thumbs = _ask_yn("generate thumbnails", True)
+    similarity = _ask_yn("check scene similarity", True) if thumbs else False
+    workers = _ask_int("thumbnail workers", 4, 1, 32) if thumbs else 4
+    err.print()
+
+    _section("review", "05/05")
+    stem = Path(video).stem
+    _summary_panel([
+        ("video",      stem),
+        ("output",     output or f"{stem}_scenes/"),
+        ("method",     method),
+        ("min dur",    f"{min_dur}s"),
+        ("thumbnails", "yes" if thumbs else "no"),
+        ("similarity", "yes" if similarity else "no"),
+        ("workers",    str(workers) if thumbs else "—"),
+    ])
+
+    if not _ask_yn("run detect", True):
+        return
+
+    err.print()
     _LABELS = {
         "detect": "Detecting cuts",
         "segment": "Cutting scenes",
@@ -135,19 +201,19 @@ def _wizard_detect() -> None:
             progress=on_progress,
         )
 
+    err.print()
     if not result.scenes:
         fail("No scenes detected.")
         return
 
     similar_set = {idx for pair in result.similar_pairs for idx in pair}
-
     t = make_table(
         ("#",        "muted", {"justify": "right", "width": 5}),
         ("Start",    None,    {"justify": "right", "width": 9}),
         ("End",      None,    {"justify": "right", "width": 9}),
         ("Duration", None,    {"justify": "right", "width": 9}),
         ("~",        "warn",  {"justify": "center", "width": 3}),
-        title=f"{Path(video).stem}  ·  {len(result.scenes)} scenes  ·  {method}",
+        title=f"{stem}  ·  {len(result.scenes)} scenes  ·  {method}",
     )
     for s in result.scenes:
         t.add_row(
@@ -158,34 +224,32 @@ def _wizard_detect() -> None:
             "~" if s.index in similar_set else "",
         )
     console.print(t)
+    ok(f"{len(result.scenes)} scenes  ·  {len(result.similar_pairs)} similar pairs")
     dim(f"scenes.json → {result.scenes_json}")
 
 
 def _wizard_export() -> None:
-    import subprocess
-    import tempfile
     from .core.binaries import get_ffmpeg
 
-    err.print()
-    err.print(Rule("[accent]export[/]", style="muted"))
-    err.print()
+    _header()
+    _section("export", "01/04")
+    err.print("  [muted]Export selected scenes from a detect run.[/]\n")
 
-    scenes_path = _prompt_path("scenes.json path", must_exist=True)
+    scenes_path = _ask_path("scenes.json path", must_exist=True)
     if not scenes_path:
         return
 
     payload = json.loads(Path(scenes_path).read_text())
     all_scenes: list[dict] = payload.get("scenes", payload) if isinstance(payload, dict) else payload
-
     if not all_scenes:
         fail("No scenes in JSON.")
         return
 
     max_idx = max(s["scene_index"] for s in all_scenes)
-    err.print(f"  [muted]{len(all_scenes)} scenes available (0–{max_idx})[/]")
-    err.print()
+    err.print(f"\n  [muted]{len(all_scenes)} scenes available  (0 – {max_idx})[/]\n")
 
-    select = _prompt("select indices (e.g. 0,2,5-8 or blank for all)", "")
+    _section("selection", "02/04")
+    select = _ask("indices  [muted](e.g. 0,2,5-8 or blank for all)[/]", "")
     if select:
         indices: set[int] = set()
         for part in select.split(","):
@@ -202,35 +266,47 @@ def _wizard_export() -> None:
     if not selected:
         fail("No scenes matched.")
         return
+    err.print()
 
-    output = _prompt_path("output dir", "export")
-    merge = _confirm("merge into one file", False)
-    codec = _choice("codec", ["copy", "h264", "hevc"], "copy")
+    _section("options", "03/04")
+    output = _ask_path("output dir", "export")
+    merge = _ask_yn("merge into one file", False)
+    codec = _ask_choice("codec", ["copy", "h264", "hevc"], "copy")
+    err.print()
 
+    _section("review", "04/04")
+    _summary_panel([
+        ("scenes",   f"{len(selected)} selected"),
+        ("output",   output or "export"),
+        ("merge",    "yes" if merge else "no"),
+        ("codec",    codec),
+    ])
+
+    if not _ask_yn("run export", True):
+        return
+
+    err.print()
     output_path = Path(output or "export")
     output_path.mkdir(parents=True, exist_ok=True)
     ff = get_ffmpeg()
     CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
-
-    err.print()
-    err.print(Rule(style="muted"))
-    err.print()
+    import subprocess
 
     if merge:
         with make_progress() as progress:
             task = progress.add_task(f"Merging {len(selected)} clips", total=1)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-                concat_file = f.name
+                cfile = f.name
                 for s in selected:
                     f.write(f"file '{s['path'].replace(chr(92), '/')}'\n")
             dst = str(output_path / "merged.mp4")
             try:
-                cmd = [ff, "-y", "-f", "concat", "-safe", "0", "-i", concat_file]
+                cmd = [ff, "-y", "-f", "concat", "-safe", "0", "-i", cfile]
                 cmd += ["-c", "copy"] if codec == "copy" else ["-c:v", codec, "-c:a", "aac"]
                 cmd.append(dst)
                 subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
             finally:
-                os.unlink(concat_file)
+                os.unlink(cfile)
             progress.update(task, completed=1)
         ok(f"Merged → {dst}")
     else:
@@ -250,54 +326,67 @@ def _wizard_export() -> None:
 
 
 def _wizard_merge() -> None:
-    import subprocess
-    import tempfile
     from .core.binaries import get_ffmpeg
+    import subprocess
 
-    err.print()
-    err.print(Rule("[accent]merge[/]", style="muted"))
-    err.print()
+    _header()
+    _section("merge", "01/03")
+    err.print("  [muted]Merge multiple clips into one file.[/]\n")
+    err.print("  [muted]Enter clip paths one by one. Empty line when done.[/]\n")
 
-    err.print("  [muted]Enter clip paths one by one. Empty line when done.[/]")
     clips: list[Path] = []
     while True:
-        raw = _prompt(f"clip {len(clips) + 1}", "")
+        raw = _ask(f"clip {len(clips) + 1}  [muted](blank to finish)[/]", "")
         if not raw:
-            break
+            if len(clips) >= 2:
+                break
+            err.print("  [error]  need at least 2 clips[/]")
+            continue
         p = Path(raw)
         if not p.exists():
-            err.print(f"  [error]✗[/] not found: {raw}")
+            err.print(f"  [error]  not found:[/] {raw}")
             continue
         clips.append(p)
+        err.print(f"  [accent]  ✓[/] added  [muted]{p.name}[/]")
 
-    if len(clips) < 2:
-        fail("Need at least 2 clips.")
+    err.print()
+    _section("output", "02/03")
+    out_raw = _ask("output file", "merged.mp4")
+    out = Path(out_raw or "merged.mp4")
+    err.print()
+
+    _section("review", "03/03")
+    clip_names = "\n".join(f"  [muted]{i+1}.[/] {c.name}" for i, c in enumerate(clips))
+    err.print(clip_names)
+    _summary_panel([
+        ("clips",  str(len(clips))),
+        ("output", str(out)),
+    ])
+
+    if not _ask_yn("run merge", True):
         return
 
-    output = _prompt_path("output file", "merged.mp4")
-    out = Path(output or "merged.mp4")
+    err.print()
     out.parent.mkdir(parents=True, exist_ok=True)
-
-    err.print()
-    err.print(Rule(style="muted"))
-    err.print()
-
     ff = get_ffmpeg()
     CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 
     with make_progress() as progress:
         task = progress.add_task(f"Merging {len(clips)} clips", total=1)
         with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
-            concat_file = f.name
+            cfile = f.name
             for c in clips:
                 f.write(f"file '{str(c.resolve()).replace(chr(92), '/')}'\n")
         try:
             subprocess.run(
-                [ff, "-y", "-f", "concat", "-safe", "0", "-i", concat_file, "-c", "copy", str(out)],
+                [ff, "-y", "-f", "concat", "-safe", "0", "-i", cfile, "-c", "copy", str(out)],
                 capture_output=True, creationflags=CREATE_NO_WINDOW, check=True,
             )
+        except subprocess.CalledProcessError as e:
+            fail(f"ffmpeg: {e.stderr.decode(errors='replace')[-300:]}")
+            return
         finally:
-            os.unlink(concat_file)
+            os.unlink(cfile)
         progress.update(task, completed=1)
 
     ok(f"{len(clips)} clips → {out}")
@@ -306,89 +395,99 @@ def _wizard_merge() -> None:
 def _wizard_info() -> None:
     from .core.video import get_video_info
 
-    err.print()
-    err.print(Rule("[accent]info[/]", style="muted"))
-    err.print()
+    _header()
+    _section("info")
+    err.print("  [muted]Show video and audio stream metadata.[/]\n")
 
-    video = _prompt_path("video path", must_exist=True)
+    video = _ask_path("video path", must_exist=True)
     if not video:
         return
 
     err.print()
-
     data = get_video_info(video)
     dur = data["duration"]
     h, m, s = int(dur // 3600), int((dur % 3600) // 60), dur % 60
     dur_str = (f"{h}h {m:02d}m {s:05.2f}s" if h else f"{m}m {s:05.2f}s" if m else f"{s:.2f}s")
 
-    console.print(f"[label]{Path(video).name}[/]  [muted]{dur_str}[/]\n")
-
-    def _fmt_br(bps):
+    def _br(bps):
         if not bps: return "—"
         return f"{bps/1_000_000:.1f} Mbps" if bps >= 1_000_000 else f"{bps/1_000:.0f} kbps"
+
+    console.print(f"\n[label]{Path(video).name}[/]  [muted]{dur_str}[/]\n")
 
     for stream in data["streams"]:
         if stream["type"] == "video":
             t = make_table(("", "muted", {"width": 14}), ("", "label", {}), title="Video")
-            t.add_row("Codec", stream["codec"])
+            t.add_row("Codec",      stream["codec"])
             t.add_row("Resolution", f"{stream['width']}×{stream['height']}")
-            t.add_row("FPS", str(stream["fps"]))
-            t.add_row("Bitrate", _fmt_br(stream["bit_rate"]))
+            t.add_row("FPS",        str(stream["fps"]))
+            t.add_row("Bitrate",    _br(stream["bit_rate"]))
             console.print(t)
         elif stream["type"] == "audio":
             t = make_table(("", "muted", {"width": 14}), ("", "label", {}), title="Audio")
-            t.add_row("Codec", stream["codec"])
+            t.add_row("Codec",       stream["codec"])
             t.add_row("Sample rate", f"{stream['sample_rate']} Hz")
-            t.add_row("Channels", str(stream["channels"]))
-            t.add_row("Bitrate", _fmt_br(stream["bit_rate"]))
+            t.add_row("Channels",    str(stream["channels"]))
+            t.add_row("Bitrate",     _br(stream["bit_rate"]))
             console.print(t)
 
 
 # ---------------------------------------------------------------------------
-# Main session loop
+# Main menu + session loop
 # ---------------------------------------------------------------------------
 
-_COMMANDS = {
-    "detect": (_wizard_detect, "split video into scenes"),
-    "export": (_wizard_export, "export selected scenes"),
-    "merge":  (_wizard_merge,  "merge clips into one file"),
-    "info":   (_wizard_info,   "show video metadata"),
-}
+_COMMANDS: list[tuple[str, str, object]] = [
+    ("detect", "split video into scenes at cut boundaries", _wizard_detect),
+    ("export", "export selected scenes from a detect run",  _wizard_export),
+    ("merge",  "merge multiple clips into one file",        _wizard_merge),
+    ("info",   "show video stream metadata",                _wizard_info),
+]
+
+
+def _show_menu() -> None:
+    _header()
+
+    t = Table(box=None, show_header=False, padding=(0, 2), show_edge=False)
+    t.add_column("num",  style="muted",   width=4)
+    t.add_column("cmd",  style="accent bold", width=10)
+    t.add_column("desc", style="muted")
+
+    for i, (cmd, desc, _) in enumerate(_COMMANDS, 1):
+        t.add_row(f"0{i}", cmd, desc)
+
+    t.add_row("", "", "")
+    t.add_row("00", "quit", "exit session")
+
+    err.print(
+        Panel(t, border_style="muted", padding=(0, 1))
+    )
+    err.print()
 
 
 def run_wizard() -> None:
     """Launch the interactive AMVerge CLI session."""
-    os.system("cls" if os.name == "nt" else "clear")
-
-    err.print(f"\n  [accent bold]AMVerge[/] [muted]CLI[/]  [muted]v{__version__}[/]\n")
-    err.print(Rule(style="muted"))
+    cmd_map = {str(i): fn for i, (_, _, fn) in enumerate(_COMMANDS, 1)}
+    name_map = {cmd: fn for cmd, _, fn in _COMMANDS}
 
     while True:
-        err.print()
-        parts = "  ·  ".join(
-            f"[accent]{cmd}[/]  [muted]{desc}[/]"
-            for cmd, (_, desc) in _COMMANDS.items()
-        )
-        err.print(f"  {parts}")
-        err.print(f"  [muted]quit[/]  [muted]exit session[/]")
-        err.print()
+        _show_menu()
 
-        raw = _prompt("command", "").lower()
+        raw = _ask("command", "").lower().strip()
 
-        if raw in ("quit", "exit", "q", ""):
-            err.print()
-            err.print("  [muted]bye[/]\n")
+        if raw in ("00", "0", "quit", "exit", "q", ""):
+            err.print("\n  [muted]bye[/]\n")
             break
 
-        if raw not in _COMMANDS:
-            err.print(f"  [error]✗[/] unknown command '{raw}'")
+        fn = cmd_map.get(raw) or name_map.get(raw)
+        if fn is None:
+            err.print(f"  [error]  unknown command[/] '{raw}'")
+            import time; time.sleep(0.8)
             continue
 
-        fn, _ = _COMMANDS[raw]
         try:
             fn()
         except KeyboardInterrupt:
             err.print("\n  [muted]cancelled[/]")
 
         err.print()
-        err.print(Rule(style="muted"))
+        _ask("press enter to continue", "")
