@@ -143,9 +143,10 @@ def _wizard_detect() -> None:
     err.print()
 
     _section("detection", "03/05")
-    method = _ask_choice("method", ["keyframe", "edge"], "keyframe")
-    err.print(f"  [muted]  keyframe - fast, cuts at I-frame boundaries[/]")
-    err.print(f"  [muted]  edge     - accurate, needs opencv  [pip install amverge-cli[edge]][/]\n")
+    method = _ask_choice("method", ["keyframe", "edge", "transnetv2"], "keyframe")
+    err.print(f"  [muted]  keyframe   - fast, cuts at I-frame boundaries[/]")
+    err.print(f"  [muted]  edge       - accurate, needs opencv  [pip install amverge[edge]][/]")
+    err.print(f"  [muted]  transnetv2 - ML-based, best accuracy  [pip install amverge[ml]][/]\n")
     min_dur = _ask_float("min scene duration (s)", 0.25, 0.01, 60.0)
     err.print()
 
@@ -242,6 +243,10 @@ def _wizard_export() -> None:
         fail("No scenes in JSON.")
         return
 
+    for s in all_scenes:
+        if "scene_index" not in s and "index" in s:
+            s["scene_index"] = s["index"]
+
     max_idx = max(s["scene_index"] for s in all_scenes)
     err.print(f"\n  [muted]{len(all_scenes)} scenes available  (0 – {max_idx})[/]\n")
 
@@ -268,15 +273,23 @@ def _wizard_export() -> None:
     _section("options", "03/04")
     output = _ask_path("output dir", "export")
     merge = _ask_yn("merge into one file", False)
-    codec = _ask_choice("codec", ["copy", "h264", "hevc"], "copy")
+    codec = _ask_choice("codec", ["copy", "h264", "hevc", "h264_main", "h265_main", "av1_main", "prores_422"], "copy")
+    err.print(f"  [muted]  copy/h264/hevc are aliases for main profiles[/]")
+    err.print(f"  [muted]  full list: h264_main/high/high10/high422  h265_main/main10/main12/main422_10  av1_main  prores_*[/]\n")
+    audio = _ask_choice("audio", ["copy", "aac", "aac_320", "pcm16", "flac", "opus", "mp3", "none"], "copy")
+    container = _ask_choice("container", ["mp4", "mkv", "mov"], "mp4")
+    hardware = _ask_choice("hardware", ["auto", "gpu", "cpu"], "auto")
     err.print()
 
     _section("review", "04/04")
     _summary_panel([
-        ("scenes",   f"{len(selected)} selected"),
-        ("output",   output or "export"),
-        ("merge",    "yes" if merge else "no"),
-        ("codec",    codec),
+        ("scenes",    f"{len(selected)} selected"),
+        ("output",    output or "export"),
+        ("merge",     "yes" if merge else "no"),
+        ("codec",     codec),
+        ("audio",     audio),
+        ("container", container),
+        ("hardware",  hardware),
     ])
 
     if not _ask_yn("run export", True):
@@ -289,6 +302,10 @@ def _wizard_export() -> None:
     CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
     import subprocess
 
+    from .commands.export import AUDIO_FFMPEG, CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, _resolve_gpu
+    codec = CODEC_ALIASES.get(codec, codec)
+    use_gpu = _resolve_gpu(hardware, codec)
+
     if merge:
         with make_progress() as progress:
             task = progress.add_task(f"Merging {len(selected)} clips", total=1)
@@ -296,10 +313,23 @@ def _wizard_export() -> None:
                 cfile = f.name
                 for s in selected:
                     f.write(f"file '{s['path'].replace(chr(92), '/')}'\n")
-            dst = str(output_path / "merged.mp4")
+            dst = str(output_path / f"merged.{container}")
             try:
                 cmd = [ff, "-y", "-f", "concat", "-safe", "0", "-i", cfile]
-                cmd += ["-c", "copy"] if codec == "copy" else ["-c:v", codec, "-c:a", "aac"]
+                if codec == "copy":
+                    if audio == "copy":
+                        cmd += ["-c", "copy"]
+                    else:
+                        cmd += ["-c:v", "copy"]
+                        cmd += AUDIO_FFMPEG[audio]
+                else:
+                    profile = CODEC_PROFILES[codec]
+                    encoder = profile["gpu"] if use_gpu and profile["gpu"] else profile["cpu"]
+                    cmd += ["-c:v", str(encoder)]
+                    args = str(profile["args"]).strip()
+                    if args:
+                        cmd += args.split()
+                    cmd += AUDIO_FFMPEG[audio]
                 cmd.append(dst)
                 subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
             finally:
@@ -311,13 +341,25 @@ def _wizard_export() -> None:
             task = progress.add_task(f"Exporting {len(selected)} clips", total=len(selected))
             for s in selected:
                 idx = s["scene_index"]
-                dst = str(output_path / f"scene_{idx:04d}.mp4")
+                dst = str(output_path / f"scene_{idx:04d}.{container}")
                 if codec == "copy":
-                    subprocess.run([ff, "-y", "-i", s["path"], "-c", "copy", dst],
-                                   capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
+                    cmd = [ff, "-y", "-i", s["path"]]
+                    if audio == "copy":
+                        cmd += ["-c", "copy"]
+                    else:
+                        cmd += ["-c:v", "copy"]
+                        cmd += AUDIO_FFMPEG[audio]
+                    cmd.append(dst)
                 else:
-                    subprocess.run([ff, "-y", "-i", s["path"], "-c:v", codec, "-c:a", "aac", dst],
-                                   capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
+                    profile = CODEC_PROFILES[codec]
+                    encoder = profile["gpu"] if use_gpu and profile["gpu"] else profile["cpu"]
+                    cmd = [ff, "-y", "-i", s["path"], "-c:v", str(encoder)]
+                    args = str(profile["args"]).strip()
+                    if args:
+                        cmd += args.split()
+                    cmd += AUDIO_FFMPEG[audio]
+                    cmd.append(dst)
+                subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
                 progress.advance(task)
         ok(f"{len(selected)} clips -> {output_path}")
 
