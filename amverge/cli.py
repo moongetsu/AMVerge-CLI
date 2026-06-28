@@ -8,6 +8,7 @@ from .commands.about import about
 from .commands.credits import credits
 from .commands.changelog import changelog
 from .commands.usage import usage
+from .commands.backend import backend
 
 app = typer.Typer(
     name="amverge",
@@ -21,6 +22,9 @@ app.command()(detect)
 app.command()(export)
 app.command()(merge)
 app.command()(info)
+
+# App backend replacement (hidden - called by Rust sidecar)
+app.command(hidden=True)(backend)
 
 # Info
 app.command()(usage)

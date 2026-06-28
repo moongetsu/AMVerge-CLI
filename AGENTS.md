@@ -62,6 +62,7 @@ AMVerge-CLI/
 │   ├── ui.py                shared Rich theme, console, banner, progress, table helpers
 │   │
 │   ├── commands/
+│   │   ├── backend.py       amverge backend <video> <output_dir>  (hidden - Rust sidecar replacement)
 │   │   ├── detect.py        amverge detect
 │   │   ├── export.py        amverge export
 │   │   ├── merge.py         amverge merge
@@ -154,6 +155,7 @@ for scene in result.scenes:
 | `core/ipc.py` | IPC protocol for Tauri app. Emits `PROGRESS\|pct\|msg`, `INITIAL_CLIPS_READY\|json`, `THUMBNAIL_READY\|pos`, `PAIR_RESULT\|a\|b\|0or1`, `PROCESSING_COMPLETE` to stderr. stdout is reserved for final JSON. Never mix IPC output with Rich output. |
 | `core/thumbnails_streaming.py` | Used only in `--ipc` mode. Emits events as each thumbnail completes. Do not use in normal CLI mode - use `core/thumbnails.py` there. |
 | `core/discord_rpc.py` | Uses same CLIENT_ID as AMVerge app (`1497922104065134823`). Silently no-ops if pypresence not installed. Auto-connects per command. `--no-rpc` flag on detect/export/merge to disable. |
+| `commands/backend.py` | Hidden command. Positional interface matches original `app.py`: `amverge backend <video_path> <output_dir>`. Rust replaces `python app.py <video> <dir>` with `amverge backend <video> <dir>` - no other Rust changes needed. Output dir comes from Tauri app data dir, not next to the video. |
 
 ## Theme
 
