@@ -17,7 +17,6 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import torch
 
 from .ipc import emit_progress, log
 from .nelux_runtime import _get_nelux_video_reader
@@ -67,6 +66,7 @@ def _run_model_batch(
     counts: np.ndarray,
     device: str,
 ) -> None:
+    import torch
     tensor = torch.from_numpy(batch).unsqueeze(dim=0).to(device)
     with torch.inference_mode():
         single_frame_pred, _ = model(tensor)
@@ -127,6 +127,7 @@ def decode_and_detect_scenes(
         raise RuntimeError("Failed to create stdout pipe")
 
     emit_progress(20, "Loading TransNetV2 model...")
+    import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = TransNetV2(device=device)
     model.eval()
@@ -196,6 +197,8 @@ def decode_video_frames_nelux(input_video: str | Path) -> np.ndarray:
         >>> print(frames.shape)  # (378, 27, 48, 3)
     """
 
+    log("Running nelux video decode...")
+    import torch
     VideoReader = _get_nelux_video_reader()
     decode_accelerator = "nvdec" if torch.cuda.is_available() else None
     reader = VideoReader(
@@ -290,6 +293,7 @@ def run_model_one_pass(
     from transnetv2_pytorch import TransNetV2
 
     log("Running TransNetV2 one-pass inference...")
+    import torch
     num_frames = len(frames)
     scores = np.zeros(num_frames)
     counts = np.zeros(num_frames)
