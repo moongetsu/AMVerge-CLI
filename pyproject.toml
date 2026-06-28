@@ -21,6 +21,7 @@ dependencies = [
 amverge = "amverge.cli:app"
 
 [project.optional-dependencies]
+ml      = ["torch>=2.0", "transnetv2-pytorch", "tqdm>=4.0"]
 edge    = ["opencv-python-headless>=4.9"]
 discord = ["pypresence>=4.3"]
 dev     = ["pyinstaller>=6"]

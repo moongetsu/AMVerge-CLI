@@ -17,6 +17,7 @@ AMVerge features as a CLI tool and Python library. Ports the AMVerge desktop app
 ```bash
 pip install -e .           # base install (keyframe detection only)
 pip install -e ".[edge]"   # + OpenCV for edge detection method
+pip install -e ".[ml]"     # + TransNetV2 ML detection (torch, GPU optional)
 ```
 
 No build step. Pure Python package, `hatchling` backend.
@@ -41,10 +42,14 @@ twine upload dist/*
 |---|---|
 | CLI | Typer |
 | UI | Rich (custom green theme) |
-| Video decode | PyAV (packet demux + frame decode) |
+| Video decode | PyAV (packet demux + keyframe timestamps) |
+| Video decode (ML) | Nelux (Windows native, optional) or FFmpeg pipe |
 | Video process | FFmpeg / FFprobe (subprocess) |
+| Scene detection | TransNetV2 via `transnetv2_pytorch` (optional, `[ml]` extra) |
+| Scene cutting | Smart cut: lossless copy + re-encode tail, or full re-encode (HEVC/fallback) |
 | Image | Pillow |
 | Numerics | NumPy |
+| GPU | PyTorch (CUDA auto-detected, CPU fallback) |
 | Edge detection | OpenCV (optional, `[edge]` extra) |
 | Package | hatchling, PyPI name `amverge` |
 | Discord RPC | pypresence (optional, `[discord]` extra) |
@@ -73,20 +78,28 @@ AMVerge-CLI/
 │   │   └── changelog.py     amverge changelog
 │   │
 │   └── core/                pure logic - no Rich/Typer deps, safe as library
-│       ├── binaries.py      get_ffmpeg(), get_ffprobe() - PATH then local bin/ fallback
-│       ├── keyframes.py     generate_keyframes() - PyAV packet demux + decode fallback
-│       ├── video.py         get_video_duration(), get_video_info(), merge_short_scenes()
-│       ├── segmenter.py     run_ffmpeg_segment() - 1500-cut Windows chunking
-│       ├── thumbnails.py    make_thumbnail(), generate_thumbnails() - ThreadPoolExecutor
-│       ├── similarity.py    find_similar_pairs() - cosine similarity on pixel arrays
-│       ├── hevc.py                  is_hevc() - ffprobe codec check
+│       ├── binaries.py              get_binary(), get_ffmpeg(), get_ffprobe() - PyInstaller-aware PATH search
+│       ├── ipc.py                   emit_progress(), emit_event(), log(), check_if_path_exists(), build_video_cache_prefix()
+│       ├── probe_utils.py           probe_video_fps/duration/dimensions/total_frames via ffprobe
+│       ├── scene_utils.py           scenes_to_objects(), scenes_frames_to_seconds()
+│       ├── codec_utils.py           check_if_hevc() via ffprobe
+│       ├── keyframe_align.py        get_keyframe_timestamps_pyav(), classify_scenes_by_keyframe_alignment()
+│       ├── smart_cut.py             cut_scene(), cut_all_scenes() - lossless copy / smartcut / reencode
+│       ├── nelux_runtime.py         _get_nelux_video_reader() - Windows DLL config for Nelux
+│       ├── scene_detection.py       decode_video_frames_nelux(), decode_and_detect_scenes(), run_model_one_pass()
+│       ├── transnet_constants.py    FRAME_WIDTH/HEIGHT/CHANNELS/BYTES, WINDOW_SIZE, STRIDE
+│       ├── keyframes.py             generate_keyframes() - PyAV packet demux (V1 detect command)
+│       ├── video.py                 get_video_duration(), get_video_info(), merge_short_scenes()
+│       ├── segmenter.py             run_ffmpeg_segment() - 1500-cut Windows chunking (V1)
+│       ├── thumbnails.py            make_thumbnail(), generate_thumbnails() - ThreadPoolExecutor
+│       ├── similarity.py            find_similar_pairs() - cosine similarity on pixel arrays
+│       ├── hevc.py                  is_hevc() - ffprobe codec check (V1)
 │       ├── image.py                 crop_image() + CropData - supports animated GIF
-│       ├── ipc.py                   emit_progress() + emit_event() - IPC protocol for Tauri app
-│       ├── thumbnails_streaming.py  streaming thumbnail gen with IPC events (app replacement mode)
+│       ├── thumbnails_streaming.py  streaming thumbnail gen with IPC events (V1 backend mode)
 │       ├── discord_rpc.py           DiscordRPC class - pypresence wrapper, CLIENT_ID from AMVerge
 │       └── detection/
-│           ├── keyframe.py  detect_cuts_by_keyframe()
-│           └── edge.py      detect_cuts_by_edge() - guarded cv2 import, clear error if missing
+│           ├── keyframe.py  detect_cuts_by_keyframe() (V1)
+│           └── edge.py      detect_cuts_by_edge() - guarded cv2 import (V1)
 │
 ├── docs/
 │   ├── installation.md
@@ -109,7 +122,25 @@ AMVerge-CLI/
 
 `cli.py` uses `@app.callback(invoke_without_command=True)`. When `ctx.invoked_subcommand is None`, calls `run_wizard()` from `wizard.py`. All wizard output goes to `stderr` so stdout stays clean for piping.
 
-### Detection pipeline
+### V2 backend pipeline (TransNetV2)
+
+```
+decode_video_frames_nelux() or decode_and_detect_scenes()
+        ↓ (frames ndarray)
+run_model_one_pass() (TransNetV2, GPU/CPU)
+        ↓ (scenes_secs, scenes_frames ndarray - cached as .npy)
+scenes_to_objects()
+        ↓ emit INITIAL_CLIPS_READY|[json]
+get_keyframe_timestamps_pyav() + check_if_hevc()
+        ↓
+classify_scenes_by_keyframe_alignment()
+        ↓
+Phase 1: cut_all_scenes() lossless copy (max_workers=8)  -> emit CLIP_READY per scene
+        ↓ emit PHASE1_COMPLETE
+Phase 2: cut_all_scenes() re-encode (max_workers=2)      -> emit REENCODE_PROGRESS + CLIP_READY
+```
+
+### V1 detection pipeline (keyframe, no ML)
 
 ```
 generate_keyframes() (PyAV packet demux)
@@ -152,10 +183,14 @@ for scene in result.scenes:
 | `core/detection/edge.py` | `import cv2` is inside the function body, not at module level. Raises clear `ImportError` pointing to `pip install amverge[edge]` if OpenCV missing. Keep it this way - edge is an optional dep. |
 | `wizard.py` | `_credits_table()` is imported from `commands/credits.py` to avoid duplication. The wizard and the direct `amverge credits` command share one table definition. |
 | `ui.py` | `err` console (stderr) used for all interactive/wizard output. `console` (stdout) for command results. Do not mix them. |
-| `core/ipc.py` | IPC protocol for Tauri app. Emits `PROGRESS\|pct\|msg`, `INITIAL_CLIPS_READY\|json`, `THUMBNAIL_READY\|pos`, `PAIR_RESULT\|a\|b\|0or1`, `PROCESSING_COMPLETE` to stderr. stdout is reserved for final JSON. Never mix IPC output with Rich output. |
-| `core/thumbnails_streaming.py` | Used only in `--ipc` mode. Emits events as each thumbnail completes. Do not use in normal CLI mode - use `core/thumbnails.py` there. |
+| `core/ipc.py` | IPC protocol for Tauri app. V2 events: `PROGRESS\|pct\|msg`, `INITIAL_CLIPS_READY\|json`, `CLIP_READY\|idx\|path\|mode`, `PHASE1_COMPLETE`, `REENCODE_PROGRESS\|done\|total`. stdout reserved for final JSON. Never mix IPC output with Rich output. |
+| `core/scene_detection.py` | TransNetV2 inference. Requires `[ml]` extra. `TRANSNET_AVAILABLE` flag guards import at module level - raises clear `ImportError` if missing. Do not import torch at module level in other files. |
+| `core/smart_cut.py` | Four cut modes: `copy` (start on keyframe), `snapped_copy` (HEVC CPU - snaps to nearest keyframe within 5s), `smartcut` (H.264 - encode tiny head + lossless tail), `reencode` (full fallback). Never remove the HEVC CPU path - HEVC re-encode without CUDA takes 10+ minutes. |
+| `core/nelux_runtime.py` | Windows DLL setup for Nelux video reader. Set `AMVERGE_FFMPEG_BIN` env var to FFmpeg shared DLL directory. Idempotent - safe to call multiple times. |
+| `core/keyframe_align.py` | `get_keyframe_timestamps_pyav` uses PyAV demux with `stream.discard = "NONKEY"` - fast, reads packet metadata only. `classify_scenes_by_keyframe_alignment` partitions scenes for Phase 1 vs Phase 2 cutting. |
+| `core/thumbnails_streaming.py` | V1 backend mode only. Emits events as each thumbnail completes. Not used in V2 backend. |
 | `core/discord_rpc.py` | Uses same CLIENT_ID as AMVerge app (`1497922104065134823`). Silently no-ops if pypresence not installed. Auto-connects per command. `--no-rpc` flag on detect/export/merge to disable. |
-| `commands/backend.py` | Hidden command. Positional interface matches original `app.py`: `amverge backend <video_path> <output_dir>`. Rust replaces `python app.py <video> <dir>` with `amverge backend <video> <dir>` - no other Rust changes needed. Output dir comes from Tauri app data dir, not next to the video. |
+| `commands/backend.py` | V2 backend. Positional interface: `amverge backend <video_path> <output_dir> [import_method]`. Rust replaces `python app.py <video> <dir>` with `amverge backend <video> <dir>` - no Rust changes needed. Emits V2 IPC events. Outputs JSON schema v1.0 with `schema_version`, `run_id`, `video` metadata block. |
 
 ## Theme
 
