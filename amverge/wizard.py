@@ -450,53 +450,68 @@ def _wizard_help() -> None:
     )
     t.add_row("detect",  "VIDEO  [--output DIR] [--method keyframe|edge]",  "split video into scenes")
     t.add_row("",        "[--min-duration 0.25] [--workers 4]",             "")
-    t.add_row("",        "[--no-thumbnails] [--no-similarity]",             "")
+    t.add_row("",        "[--no-thumbnails] [--no-similarity] [--ipc]",     "")
     t.add_row("export",  "VIDEO  --scenes JSON  [--output DIR]",            "export scenes to disk")
     t.add_row("",        "[--select 0,2,5-8]  [--merge]  [--codec copy]",  "")
     t.add_row("merge",   "CLIP CLIP ...  --output FILE",                    "concat clips")
-    t.add_row("info",    "VIDEO",                                            "show stream metadata")
     console.print(t)
 
-    # Info commands
     t2 = make_table(
+        ("command",    "#22c55e bold", {"width": 12}),
+        ("args",       "label",        {"width": 38}),
+        ("note",       "muted",        {}),
+        title="Video info",
+    )
+    t2.add_row("info",       "VIDEO",                                     "stream metadata (PyAV)")
+    t2.add_row("probe",      "VIDEO  [--no-keyframes] [--cache-dir DIR]", "V2 diagnostics: codec, HEVC, keyframes, cache")
+    t2.add_row("keyframes",  "VIDEO  [--json] [--count]",                 "dump keyframe timestamps")
+    t2.add_row("scenes",     "VIDEO  [--json] [--min-duration N]",        "scene list from .npy cache")
+    t2.add_row("cache",      "DIR  [--clear VIDEO] [--clear-all]",        "list or delete .npy caches")
+    console.print(t2)
+
+    t3 = make_table(
         ("command",   "#22c55e bold", {"width": 10}),
         ("note",      "muted",        {}),
-        title="Info",
+        title="App info",
     )
-    t2.add_row("usage",     "command reference (this page)")
-    t2.add_row("about",     "what is AMVerge CLI")
-    t2.add_row("credits",   "meet the team")
-    t2.add_row("changelog", "version history")
-    console.print(t2)
+    t3.add_row("usage",     "command reference (this page)")
+    t3.add_row("about",     "what is AMVerge CLI")
+    t3.add_row("credits",   "meet the team")
+    t3.add_row("changelog", "version history")
+    console.print(t3)
 
     console.print("\n[muted]  Examples[/]\n")
     examples = [
-        ("detect",              "amverge detect ep01.mkv"),
-        ("detect (accurate)",   "amverge detect ep01.mkv --method edge --min-duration 0.5"),
-        ("export all",          "amverge export ep01.mkv --scenes ep01_scenes/scenes.json"),
-        ("export selection",    "amverge export ep01.mkv -s scenes.json --select 0,2,5-8 --merge"),
-        ("merge",               "amverge merge scene_0001.mp4 scene_0002.mp4 -o out.mp4"),
-        ("info",                "amverge info ep01.mkv"),
-        ("library",             "python -c \"from amverge import detect_scenes; detect_scenes('ep01.mkv')\""),
+        ("detect (V2 ML)",       "amverge detect ep01.mkv"),
+        ("detect (keyframe)",    "amverge detect ep01.mkv --method keyframe"),
+        ("detect (edge)",        "amverge detect ep01.mkv --method edge --min-duration 0.5"),
+        ("export all",           "amverge export ep01.mkv --scenes scenes.json"),
+        ("export selection",     "amverge export ep01.mkv -s scenes.json --select 0,2,5-8 --merge"),
+        ("merge",                "amverge merge scene_0001.mp4 scene_0002.mp4 -o out.mp4"),
+        ("probe",                "amverge probe ep01.mkv"),
+        ("keyframes",            "amverge keyframes ep01.mkv --json"),
+        ("scenes from cache",    "amverge scenes ep01.mkv --cache-dir path/to/cache"),
+        ("library",              "from amverge import detect_scenes"),
     ]
-    t3 = make_table(
+    t4 = make_table(
         ("",      "muted",  {"width": 22}),
         ("",      "label",  {}),
     )
     for label, cmd in examples:
-        t3.add_row(label, cmd)
-    console.print(t3)
+        t4.add_row(label, cmd)
+    console.print(t4)
 
     console.print("\n[muted]  Detection methods[/]\n")
-    t4 = make_table(
-        ("method",    "#22c55e bold", {"width": 10}),
-        ("speed",     "label",       {"width": 8}),
-        ("accuracy",  "label",       {"width": 10}),
-        ("requires",  "muted",       {}),
+    t5 = make_table(
+        ("method",      "#22c55e bold", {"width": 12}),
+        ("speed",       "label",        {"width": 8}),
+        ("accuracy",    "label",        {"width": 10}),
+        ("requires",    "muted",        {}),
     )
-    t4.add_row("keyframe", "fast",   "good",      "nothing extra")
-    t4.add_row("edge",     "slower", "excellent", "pip install amverge-cli[edge]")
-    console.print(t4)
+    t5.add_row("transnetv2", "medium", "best",      "pip install amverge[ml]  (CUDA optional)")
+    t5.add_row("keyframe",   "fast",   "good",      "nothing extra")
+    t5.add_row("edge",       "slower", "excellent", "pip install amverge[edge]")
+    console.print(t5)
 
 
 def _wizard_about() -> None:
@@ -516,25 +531,28 @@ def _wizard_about() -> None:
     blurb = (
         "AMVerge CLI ports the scene-detection and clip-management engine from the "
         "[accent]AMVerge[/] desktop app into a standalone Python library and CLI tool.\n\n"
-        "Use it to split anime episodes (or any video) into scenes at cut boundaries, "
-        "browse the results, export only the clips you want, and merge fragments back "
-        "together - all from a terminal or your own Python scripts.\n\n"
-        "Built on [accent]FFmpeg[/] and [accent]PyAV[/]. No GUI required."
+        "Use it to split anime episodes (or any video) into scenes using "
+        "[accent]TransNetV2[/] ML detection or fast keyframe analysis, "
+        "export only the clips you want, and merge fragments - all from a terminal "
+        "or your own Python scripts.\n\n"
+        "Built on [accent]FFmpeg[/], [accent]PyAV[/], and [accent]PyTorch[/]. No GUI required."
     )
     console.print(Panel(blurb, border_style="muted", padding=(1, 2)))
     console.print()
 
     t = make_table(
-        ("",  "muted",  {"width": 18}),
+        ("",  "muted",  {"width": 20}),
         ("",  "label",  {}),
         title="Key features",
     )
-    t.add_row("Keyframe detection",  "near-instant splitting using I-frames, no re-encode")
-    t.add_row("Edge detection",      "cosine-similarity approach for difficult encodes")
-    t.add_row("Thumbnails",          "auto-generated scene previews via PyAV")
-    t.add_row("Similarity check",    "flags duplicate or near-identical adjacent scenes")
-    t.add_row("Python library",      "from amverge import detect_scenes")
-    t.add_row("Zero quality loss",   "copy-mode export keeps the original stream intact")
+    t.add_row("TransNetV2 detection", "ML scene detection, GPU-accelerated, highly accurate")
+    t.add_row("Keyframe detection",   "near-instant splitting via I-frames, no ML required")
+    t.add_row("Smart cut",            "lossless copy for keyframe-aligned scenes, smartcut or re-encode for the rest")
+    t.add_row("HEVC support",         "snapped-copy on CPU, full re-encode with CUDA")
+    t.add_row("Scene cache",          "TransNetV2 results saved as .npy - skips re-detection on re-open")
+    t.add_row("Discord RPC",          "live status via pypresence, same app ID as AMVerge desktop")
+    t.add_row("Python library",       "from amverge import detect_scenes")
+    t.add_row("Zero quality loss",    "copy-mode export keeps original stream intact")
     console.print(t)
 
     console.print()
@@ -564,50 +582,23 @@ def _wizard_credits() -> None:
 
 
 def _wizard_changelog() -> None:
+    from .commands.changelog import _CLI_ENTRIES, _APP_ENTRIES
+
     _header()
     _section("changelog")
-    err.print("  [muted]AMVerge version history.[/]\n")
+    err.print("  [muted]AMVerge CLI and app version history.[/]\n")
 
-    entries = [
-        ("v1.2.6", ["Fixed AMVerge updater failing"]),
-        ("v1.2.5", ["Fixed videos not playing in Windows Media Player"]),
-        ("v1.2.4", [
-            "Fixed files with % or special characters in name not importing",
-            "Export now sets selected audio stream as default track",
-        ]),
-        ("v1.2.3", ["Added safeguards to episode clear so it doesn't wipe everything"]),
-        ("v1.2.2", [
-            "Fixed episodes disappearing on startup",
-            "Fixed Python build errors for some Windows users",
-        ]),
-        ("v1.2.1", ["Fixed hovered videos sometimes not showing full clip content"]),
-        ("v1.2.0", [
-            "Added audio stream switching for previewing",
-            "Added 'Update Available!' in-app notification",
-            "Fixed timeline click not working",
-            "Fixed audio toggle resetting video",
-            "Fixed Intel Macs not importing properly",
-        ]),
-        ("v1.0.0", [
-            "macOS support",
-            "Backend merges clips with similar thumbnails to fix awkward cuts",
-            "Export profiles with customizable icons",
-            "Quick download buttons per clip",
-            "Audio hover - plays audio when hovering clips",
-            "Discord Rich Presence support",
-            "General settings: change episode storage path, reset to defaults",
-            "Appearance: GIF background support, built-in cropper, accent → bg sync",
-            "Widescreen clip tiles and timestamp toggles",
-            "Fixed large video files not importing",
-            "Fixed 4K images turning white on import",
-        ]),
-    ]
+    console.print("[muted]  CLI[/]\n")
+    for version, changes in _CLI_ENTRIES:
+        t = make_table(("", "muted", {}), title=version)
+        for c in changes:
+            t.add_row(c)
+        console.print(t)
+        console.print()
 
-    for version, changes in entries:
-        t = make_table(
-            ("",  "muted",  {}),
-            title=version,
-        )
+    console.print("[muted]  AMVerge App[/]\n")
+    for version, changes in _APP_ENTRIES:
+        t = make_table(("", "muted", {}), title=version)
         for c in changes:
             t.add_row(c)
         console.print(t)
@@ -619,10 +610,10 @@ def _wizard_changelog() -> None:
 # ---------------------------------------------------------------------------
 
 _WORKFLOW: list[tuple[str, str, object]] = [
-    ("detect", "split video into scenes at cut boundaries", _wizard_detect),
-    ("export", "export selected scenes from a detect run",  _wizard_export),
-    ("merge",  "merge multiple clips into one file",        _wizard_merge),
-    ("info",   "show video stream metadata",                _wizard_info),
+    ("detect",    "split video into scenes at cut boundaries", _wizard_detect),
+    ("export",    "export selected scenes from a detect run",  _wizard_export),
+    ("merge",     "merge multiple clips into one file",        _wizard_merge),
+    ("info",      "show video stream metadata",                _wizard_info),
 ]
 
 _INFO: list[tuple[str, str, object]] = [
