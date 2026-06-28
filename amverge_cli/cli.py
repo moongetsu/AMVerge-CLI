@@ -4,6 +4,10 @@ from .commands.detect import detect
 from .commands.export import export
 from .commands.merge import merge
 from .commands.info import info
+from .commands.about import about
+from .commands.credits import credits
+from .commands.changelog import changelog
+from .commands.usage import usage
 
 app = typer.Typer(
     name="amverge",
@@ -12,10 +16,17 @@ app = typer.Typer(
     pretty_exceptions_show_locals=False,
 )
 
+# Workflow
 app.command()(detect)
 app.command()(export)
 app.command()(merge)
 app.command()(info)
+
+# Info
+app.command()(usage)
+app.command()(about)
+app.command()(credits)
+app.command()(changelog)
 
 
 @app.callback(invoke_without_command=True)

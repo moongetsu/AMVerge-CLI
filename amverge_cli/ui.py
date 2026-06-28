@@ -9,6 +9,7 @@ Color palette (from frontend/src/styles/variables.css):
 from __future__ import annotations
 
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import (
     BarColumn,
     MofNCompleteColumn,
@@ -18,6 +19,7 @@ from rich.progress import (
     TextColumn,
     TimeElapsedColumn,
 )
+from rich.rule import Rule
 from rich.table import Table
 from rich.theme import Theme
 from rich import box
@@ -52,11 +54,18 @@ err     = Console(theme=THEME, stderr=True, highlight=False)
 # ---------------------------------------------------------------------------
 
 def banner(command: str) -> None:
-    """Print the AMVerge CLI header with the active command name."""
+    """Print the AMVerge CLI header panel with the active command name."""
+    err.print()
     err.print(
-        f"\n[accent bold]AMVerge[/] [muted]CLI[/]  "
-        f"[muted]v{__version__}[/]  [muted]·[/]  [accent]{command}[/]\n"
+        Panel(
+            f"[white bold]AM[/][accent]Verge[/]  [muted]CLI[/]"
+            f"  [muted]v{__version__}[/]  [muted]·[/]  [accent]{command}[/]",
+            border_style="#22c55e",
+            padding=(0, 2),
+            expand=False,
+        )
     )
+    err.print()
 
 # ---------------------------------------------------------------------------
 # Progress factory

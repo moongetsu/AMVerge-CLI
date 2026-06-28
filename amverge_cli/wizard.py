@@ -463,7 +463,7 @@ def _wizard_help() -> None:
         ("note",      "muted",        {}),
         title="Info",
     )
-    t2.add_row("help",      "command reference (this page)")
+    t2.add_row("usage",     "command reference (this page)")
     t2.add_row("about",     "what is AMVerge CLI")
     t2.add_row("credits",   "meet the team")
     t2.add_row("changelog", "version history")
@@ -641,7 +641,7 @@ _WORKFLOW: list[tuple[str, str, object]] = [
 ]
 
 _INFO: list[tuple[str, str, object]] = [
-    ("help",      "command reference and usage examples",  _wizard_help),
+    ("usage",     "command reference and usage examples",  _wizard_help),
     ("about",     "what is AMVerge CLI",                   _wizard_about),
     ("credits",   "meet the team",                         _wizard_credits),
     ("changelog", "version history",                       _wizard_changelog),
