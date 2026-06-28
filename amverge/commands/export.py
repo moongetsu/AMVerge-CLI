@@ -17,6 +17,7 @@ from ..ui import banner, console, err, make_progress, make_table, ok, fail, dim
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 VALID_CODECS = {"copy", "h264", "hevc", "h265"}
 VALID_AUDIO = {"copy", "aac", "aac_320", "pcm16", "pcm24", "flac", "alac", "opus", "mp3", "none"}
+VALID_CONTAINERS = {"mp4", "mkv", "mov"}
 
 AUDIO_FFMPEG: dict[str, list[str]] = {
     "copy":     ["-c:a", "copy"],
@@ -52,6 +53,7 @@ def export(
     merge: bool = typer.Option(False, "--merge", help="Merge selected clips into one file"),
     codec: str = typer.Option("copy", "--codec", help="copy · h264 · hevc"),
     audio: str = typer.Option("copy", "--audio", help="copy · aac · aac_320 · pcm16 · pcm24 · flac · alac · opus · mp3 · none"),
+    container: str = typer.Option("mp4", "--container", help="mp4 · mkv · mov"),
     no_rpc: bool = typer.Option(False, "--no-rpc", help="Disable Discord RPC"),
 ) -> None:
     """Export selected scenes from a detect run."""
@@ -60,6 +62,9 @@ def export(
         raise typer.Exit(1)
     if audio not in VALID_AUDIO:
         fail(f"Unknown audio '{audio}'. Valid: {', '.join(sorted(VALID_AUDIO))}")
+        raise typer.Exit(1)
+    if container not in VALID_CONTAINERS:
+        fail(f"Unknown container '{container}'. Valid: {', '.join(sorted(VALID_CONTAINERS))}")
         raise typer.Exit(1)
     if codec == "h265":
         codec = "hevc"
@@ -93,9 +98,9 @@ def export(
 
     try:
         if merge:
-            _export_merged(selected, output, ff, codec, audio)
+            _export_merged(selected, output, ff, codec, audio, container)
         else:
-            _export_individual(selected, output, ff, codec, audio)
+            _export_individual(selected, output, ff, codec, audio, container)
         if rpc:
             rpc.update_complete()
     except Exception:
@@ -126,12 +131,12 @@ def _encode(src: str, dst: str, ff: str, codec: str, audio: str) -> None:
     subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
 
 
-def _export_individual(scenes: list[dict], output: Path, ff: str, codec: str, audio: str) -> None:
+def _export_individual(scenes: list[dict], output: Path, ff: str, codec: str, audio: str, container: str) -> None:
     with make_progress(show_count=True) as progress:
         task = progress.add_task(f"Exporting {len(scenes)} clips", total=len(scenes))
         for s in scenes:
             idx = s["scene_index"]
-            dst = str(output / f"scene_{idx:04d}.mp4")
+            dst = str(output / f"scene_{idx:04d}.{container}")
             if codec == "copy":
                 _copy(s["path"], dst, ff, audio)
             else:
@@ -142,7 +147,7 @@ def _export_individual(scenes: list[dict], output: Path, ff: str, codec: str, au
     ok(f"{len(scenes)} clips → {output}")
 
 
-def _export_merged(scenes: list[dict], output: Path, ff: str, codec: str, audio: str) -> None:
+def _export_merged(scenes: list[dict], output: Path, ff: str, codec: str, audio: str, container: str) -> None:
     with make_progress() as progress:
         task = progress.add_task(f"Merging {len(scenes)} clips", total=1)
 
@@ -151,7 +156,7 @@ def _export_merged(scenes: list[dict], output: Path, ff: str, codec: str, audio:
             for s in scenes:
                 f.write(f"file '{s['path'].replace(chr(92), '/')}'\n")
 
-        dst = str(output / "merged.mp4")
+        dst = str(output / f"merged.{container}")
         try:
             cmd = [ff, "-y", "-f", "concat", "-safe", "0", "-i", concat_file]
             if codec == "copy":
