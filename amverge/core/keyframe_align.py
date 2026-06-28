@@ -10,7 +10,7 @@ def get_keyframe_timestamps_pyav(video_path: str) -> list[float]:
     with av.open(video_path) as container:
         stream = container.streams.video[0]
         try:
-            stream.discard = "NONKEY"
+            stream.discard = type(stream.discard).nonkey
         except (AttributeError, KeyError):
             pass
         for packet in container.demux(stream):

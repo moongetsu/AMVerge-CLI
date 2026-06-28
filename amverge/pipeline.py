@@ -129,19 +129,23 @@ def detect_scenes(
         from .core.scene_utils import scenes_to_objects
         from .core.smart_cut import cut_all_scenes
 
-        import amverge.core.ipc as ipc_mod
-        _orig_emit = ipc_mod.emit_progress
+        import amverge.core.scene_detection as scene_det
+        import amverge.core.smart_cut as smart_cut
+        _orig_emit_scene = scene_det.emit_progress
+        _orig_emit_cut = smart_cut.emit_progress
         _stage = "detect"
 
         def _emit_patched(pct: int, msg: str) -> None:
             _progress(_stage, pct, msg)
 
-        ipc_mod.emit_progress = _emit_patched
+        scene_det.emit_progress = _emit_patched
+        smart_cut.emit_progress = _emit_patched
         try:
             _progress("detect", 0, "Starting TransNetV2 detection...")
             scenes_secs, scenes_frames = decode_and_detect_scenes(video_path)
         finally:
-            ipc_mod.emit_progress = _orig_emit
+            scene_det.emit_progress = _orig_emit_scene
+            smart_cut.emit_progress = _orig_emit_cut
 
         _progress("detect", 80, "Extracting keyframe timestamps...")
         keyframes = get_keyframe_timestamps_pyav(video_path)
@@ -166,7 +170,8 @@ def detect_scenes(
             cut_by_idx[result["scene_index"]] = result
 
         _progress("segment", 0, f"Cutting {len(phase1_scenes)} scenes (lossless copy)...")
-        ipc_mod.emit_progress = _emit_patched
+        scene_det.emit_progress = _emit_patched
+        smart_cut.emit_progress = _emit_patched
         _stage = "segment"
         try:
             cut_all_scenes(
@@ -194,7 +199,8 @@ def detect_scenes(
                     emit_progress_updates=False,
                 )
         finally:
-            ipc_mod.emit_progress = _orig_emit
+            scene_det.emit_progress = _orig_emit_scene
+            smart_cut.emit_progress = _orig_emit_cut
 
         _progress("segment", 100, f"{len(raw_scenes)} scenes written")
 

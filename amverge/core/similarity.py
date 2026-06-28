@@ -46,7 +46,7 @@ def find_similar_pairs(
 
     for i, (sa, sb) in enumerate(zip(scenes, scenes[1:])):
         if check_pair_similar(sa["thumbnail"], sb["thumbnail"], threshold):
-            pairs.append((sa["scene_index"], sb["scene_index"]))
+            pairs.append((sa.get("scene_index", sa.get("index", i)), sb.get("scene_index", sb.get("index", i + 1))))
         if progress_cb:
             try:
                 progress_cb(i + 1, total)
