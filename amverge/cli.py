@@ -5,6 +5,9 @@ from .commands.export import export
 from .commands.merge import merge
 from .commands.info import info
 from .commands.probe import probe
+from .commands.cache import cache
+from .commands.keyframes import keyframes
+from .commands.scenes import scenes
 from .commands.about import about
 from .commands.credits import credits
 from .commands.changelog import changelog
@@ -25,6 +28,9 @@ app.command()(export)
 app.command()(merge)
 app.command()(info)
 app.command()(probe)
+app.command()(cache)
+app.command()(keyframes)
+app.command()(scenes)
 
 # App backend replacement (hidden - called by Rust sidecar)
 app.command(hidden=True)(backend)

@@ -74,6 +74,9 @@ AMVerge-CLI/
 │   │   ├── merge.py         amverge merge
 │   │   ├── info.py          amverge info  (stream metadata via PyAV)
 │   │   ├── probe.py         amverge probe  (V2 diagnostics: codec/HEVC/keyframes/scene cache)
+│   │   ├── cache.py         amverge cache  (list/clear TransNetV2 .npy scene caches)
+│   │   ├── keyframes.py     amverge keyframes  (dump keyframe timestamps, --json, --count)
+│   │   ├── scenes.py        amverge scenes  (show scene list from .npy cache, --json, --min-duration)
 │   │   ├── usage.py         amverge usage  (CLI reference page)
 │   │   ├── about.py         amverge about
 │   │   ├── credits.py       amverge credits  (exports _credits_table() for wizard reuse)
