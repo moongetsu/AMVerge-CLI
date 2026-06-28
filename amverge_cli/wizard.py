@@ -443,9 +443,9 @@ def _wizard_help() -> None:
 
     # Workflow commands
     t = make_table(
-        ("command",  "accent bold", {"width": 10}),
-        ("args",     "label",       {"width": 36}),
-        ("note",     "muted",       {}),
+        ("command",  "#22c55e bold", {"width": 10}),
+        ("args",     "label",        {"width": 36}),
+        ("note",     "muted",        {}),
         title="Workflow",
     )
     t.add_row("detect",  "VIDEO  [--output DIR] [--method keyframe|edge]",  "split video into scenes")
@@ -459,8 +459,8 @@ def _wizard_help() -> None:
 
     # Info commands
     t2 = make_table(
-        ("command",   "accent bold", {"width": 10}),
-        ("note",      "muted",       {}),
+        ("command",   "#22c55e bold", {"width": 10}),
+        ("note",      "muted",        {}),
         title="Info",
     )
     t2.add_row("help",      "command reference (this page)")
@@ -489,7 +489,7 @@ def _wizard_help() -> None:
 
     console.print("\n[muted]  Detection methods[/]\n")
     t4 = make_table(
-        ("method",    "accent bold", {"width": 10}),
+        ("method",    "#22c55e bold", {"width": 10}),
         ("speed",     "label",       {"width": 8}),
         ("accuracy",  "label",       {"width": 10}),
         ("requires",  "muted",       {}),
@@ -558,8 +558,8 @@ def _wizard_credits() -> None:
     ]
 
     t = make_table(
-        ("name",  "accent bold", {"width": 18}),
-        ("role",  "muted",       {}),
+        ("name",  "#22c55e bold", {"width": 18}),
+        ("role",  "muted",        {}),
         title="Contributors",
     )
     for name, role in team:
@@ -655,7 +655,7 @@ def _show_menu() -> None:
 
     t = Table(box=None, show_header=False, padding=(0, 2), show_edge=False)
     t.add_column("num",  style="muted",       width=4)
-    t.add_column("cmd",  style="accent bold", width=12)
+    t.add_column("cmd",  style="#22c55e bold", width=12)
     t.add_column("desc", style="muted")
 
     for i, (cmd, desc, _) in enumerate(_WORKFLOW, 1):

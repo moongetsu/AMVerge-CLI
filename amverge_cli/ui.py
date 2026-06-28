@@ -99,9 +99,9 @@ def make_table(*columns: tuple[str, str | None, dict], title: str | None = None)
         title=title,
         box=box.SIMPLE,
         show_edge=False,
-        header_style="accent bold",
-        border_style="muted",
-        title_style="accent bold",
+        header_style="#22c55e bold",
+        border_style="bright_black",
+        title_style="#22c55e bold",
     )
     for header, style, kw in columns:
         t.add_column(header, style=style or "", **kw)
