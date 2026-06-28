@@ -81,20 +81,9 @@ Wraps: `check_pair_similar()`, `find_similar_pairs()`.
 
 ---
 
-## 5. Image Operations
+## 5. Image Operations ✅
 
-### `ImageCrop` class (rename from CropData)
-
-```python
-from amverge import ImageCrop
-
-crop = ImageCrop(x=10, y=10, width=200, height=200, rotation=90)
-crop.apply("input.jpg", "output.jpg")
-crop.apply("input.gif", "output.gif")
-```
-
-Wraps: `CropData`, `crop_image()`. Rename `CropData` -> `ImageCrop`.
-
+~~`ImageCrop` class~~ Done. `core/image_crop.py`, extends `CropData` with `apply()`. Exported as `ImageCrop` and `CropData`.
 ---
 
 ## 6. Diagnostics
@@ -173,7 +162,7 @@ config = TransNetConfig()
 | 4 | `SceneCache` | ✅ done |
 | 5 | `ThumbnailGenerator` | ✅ done |
 | 6 | `SimilarityChecker` | ✅ done |
-| 7 | `ImageCrop` rename | pending |
+| 7 | `ImageCrop` rename | ✅ done |
 | 8 | `check_environment()` | pending |
 | 9 | `TransNetConfig` | pending |
 | 10 | Clean examples | pending |
