@@ -12,6 +12,10 @@ license = { text = "GPL-3.0-or-later" }
 authors = [
     { name = "Moongetsu", email = "moongetsu@proton.me" },
 ]
+maintainers = [
+    { name = "Moongetsu", email = "moongetsu@proton.me" },
+    { name = "Crptk", url = "https://github.com/crptk" },
+]
 keywords = [
     "amverge", "scene-detection", "video", "transnetv2",
     "keyframe", "ffmpeg", "clip-management", "anime", "video-editing",
