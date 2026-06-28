@@ -114,6 +114,7 @@ for scene in result.scenes:
 | [Python Library](docs/library.md) | API reference, return types, low-level modules |
 | [Detection Methods](docs/detection-methods.md) | Keyframe vs edge, tuning parameters |
 | [Contributing](docs/contributing.md) | Project structure, guidelines, links |
+| [AI Setup](docs/ai-setup.md) | How to train AI tools to work like you, not generically |
 
 ---
 
@@ -121,7 +122,9 @@ for scene in result.scenes:
 
 An [AGENTS.md](AGENTS.md) file is included for AI coding assistants (OpenCode, Claude Code, Cursor, etc.).
 
-That said - using AI to work on this without understanding the codebase is not recommended. You can save time with AI tools, but you need to know what you are doing first. Read the code, understand the architecture, then use the agents file if it helps your workflow.
+Using AI without understanding the codebase is not recommended. Read the code, understand the architecture, then use the agents file if it saves you time.
+
+The best approach is not to use a generic AI assistant - it is to train it to work like you. Teach it your conventions, your decisions, your style. Done right, the output looks like yours, not like a generic answer. See [docs/ai-setup.md](docs/ai-setup.md) for a practical guide on how to do this.
 
 ---
 
