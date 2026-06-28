@@ -21,7 +21,7 @@ from .__version__ import __version__
 # ---------------------------------------------------------------------------
 
 def _ask(label: str, default: str = "", password: bool = False) -> str:
-    hint = f" [muted]\[{default}][/]" if default else ""
+    hint = f" [muted]\\[{default}][/]" if default else ""
     try:
         val = Prompt.ask(
             f"  [accent]›[/]  [label]{label}[/]{hint}",
@@ -79,7 +79,7 @@ def _ask_choice(label: str, choices: list[str], default: str) -> str:
         f"[accent bold]{c}[/]" if c == default else f"[muted]{c}[/]"
         for c in choices
     )
-    err.print(f"  [accent]›[/]  [label]{label}[/]  {opts}  [muted]\[{default}][/]")
+    err.print(f"  [accent]›[/]  [label]{label}[/]  {opts}  [muted]\\[{default}][/]")
     while True:
         raw = _ask("", default).lower()
         if raw in choices:

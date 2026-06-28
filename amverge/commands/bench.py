@@ -74,12 +74,10 @@ def bench(
                     ))
 
                 except ImportError:
-                    with make_progress(transient=True) as progress:
-                        progress.add_task("TransNetV2 ffmpeg decode...", total=None)
-                        t0 = time.perf_counter()
-                        from ..core.scene_detection import decode_and_detect_scenes
-                        scenes_secs, _ = decode_and_detect_scenes(video)
-                        total_elapsed = time.perf_counter() - t0
+                    t0 = time.perf_counter()
+                    from ..core.scene_detection import decode_and_detect_scenes
+                    scenes_secs, _ = decode_and_detect_scenes(video)
+                    total_elapsed = time.perf_counter() - t0
                     results.append((
                         f"TransNetV2 full ({device})",
                         f"{total_elapsed:.2f}s",

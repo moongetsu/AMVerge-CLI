@@ -37,4 +37,5 @@ or pass the video path as a command-line argument.
 | [thumbnails/](thumbnails/) | generate JPEG thumbnails from clips | - |
 | [similarity/](similarity/) | detect visually similar adjacent scenes | - |
 | [diagnostics/](diagnostics/) | GPU check, version info, health check | - |
+| [discord-rpc/](discord-rpc/) | Discord Rich Presence status updates | [discord] |
 | [custom-pipeline/](custom-pipeline/) | full end-to-end pipeline from scratch | [ml] |
