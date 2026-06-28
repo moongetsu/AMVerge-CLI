@@ -10,7 +10,7 @@
 
 # AMVerge CLI
 
-**AMVerge Features as a CLI Tool and Python Library.**  
+**AMVerge Features as a CLI Tool and Python Library.**
 Port of the AMVerge desktop app backend by [Crptk](https://github.com/crptk). Split videos into scenes, export clips, merge fragments, and build your own tools on top of it.
 
 ---
@@ -33,68 +33,6 @@ Port of the AMVerge desktop app backend by [Crptk](https://github.com/crptk). Sp
 - Discord Rich Presence (same app ID as AMVerge desktop)
 - Interactive wizard mode (`amverge` with no args)
 - Fully usable as a Python library - 52 names from `import amverge`
-
----
-
-## How It Works
-
-```txt
-amverge CLI  /  Python library
-          ↓
-   amverge package
-          ↓
-    PyAV  +  FFmpeg  +  PyTorch (optional)
-```
-
-**Detection:** Keyframe mode extracts I-frame timestamps via PyAV packet demux.  
-Edge mode decodes frames and compares Canny edge maps.  
-TransNetV2 runs a deep CNN on 48x27 RGB frames (GPU auto-detected, CPU fallback).
-
-**Cutting:** Scenes aligned to keyframes get lossless stream copy.  
-Non-aligned scenes get smartcut (encode head + copy tail) or full re-encode.  
-HEVC on CPU uses snapped-copy (nearest keyframe within 5s) to avoid slow re-encode.
-
-**Thumbnails:** Decoded via PyAV, resized to 960px, saved as progressive JPEG in parallel.  
-**Similarity:** Adjacent thumbnails compared via cosine similarity on 8x8 pooled pixels.
-
----
-
-## Repository Structure
-
-```txt
-AMVerge-CLI/
-│
-├── amverge/
-│   ├── cli.py                  entry point
-│   ├── pipeline.py             high-level detect_scenes() API
-│   ├── wizard.py               interactive session
-│   ├── ui.py                   shared Rich theme + components
-│   ├── commands/               one file per CLI subcommand
-│   └── core/                   pure logic, no CLI dependencies
-│
-├── docs/
-│   ├── installation.md
-│   ├── cli-reference.md
-│   ├── library.md
-│   ├── detection-methods.md
-│   └── contributing.md
-│
-├── examples/
-│   ├── detect/          scene detection scripts
-│   ├── export/          export + re-encode scripts
-│   ├── info-probe/      metadata + diagnostics
-│   ├── keyframes/       extraction + alignment
-│   ├── cutting/         smart cut + segment
-│   ├── thumbnails/      JPEG generation
-│   ├── similarity/      pair detection
-│   ├── diagnostics/     GPU + versions
-│   ├── discord-rpc/     Rich Presence
-│   └── custom-pipeline/ full end-to-end
-│
-├── assets/
-├── pyproject.toml
-└── README.md
-```
 
 ---
 
@@ -131,7 +69,70 @@ for scene in result.scenes:
 
 ---
 
-## Examples
+<details open>
+<summary><b>How It Works</b></summary>
+
+```txt
+amverge CLI  /  Python library
+          ↓
+   amverge package
+          ↓
+    PyAV  +  FFmpeg  +  PyTorch (optional)
+```
+
+**Detection:** Keyframe mode extracts I-frame timestamps via PyAV packet demux.
+Edge mode decodes frames and compares Canny edge maps.
+TransNetV2 runs a deep CNN on 48x27 RGB frames (GPU auto-detected, CPU fallback).
+
+**Cutting:** Scenes aligned to keyframes get lossless stream copy.
+Non-aligned scenes get smartcut (encode head + copy tail) or full re-encode.
+HEVC on CPU uses snapped-copy (nearest keyframe within 5s) to avoid slow re-encode.
+
+**Thumbnails:** Decoded via PyAV, resized to 960px, saved as progressive JPEG in parallel.
+**Similarity:** Adjacent thumbnails compared via cosine similarity on 8x8 pooled pixels.
+
+</details>
+
+---
+
+<details>
+<summary><b>Repository Structure</b></summary>
+
+```txt
+AMVerge-CLI/
+│
+├── amverge/
+│   ├── cli.py                  entry point
+│   ├── pipeline.py             high-level detect_scenes() API
+│   ├── wizard.py               interactive session
+│   ├── ui.py                   shared Rich theme + components
+│   ├── commands/               one file per CLI subcommand
+│   └── core/                   pure logic, no CLI dependencies
+│
+├── examples/
+│   ├── detect/          scene detection scripts
+│   ├── export/          export + re-encode scripts
+│   ├── info-probe/      metadata + diagnostics
+│   ├── keyframes/       extraction + alignment
+│   ├── cutting/         smart cut + segment
+│   ├── thumbnails/      JPEG generation
+│   ├── similarity/      pair detection
+│   ├── diagnostics/     GPU + versions
+│   ├── discord-rpc/     Rich Presence
+│   └── custom-pipeline/ full end-to-end
+│
+├── docs/
+├── assets/
+├── pyproject.toml
+└── README.md
+```
+
+</details>
+
+---
+
+<details>
+<summary><b>Examples</b></summary>
 
 Runnable Python scripts for every feature. Each with its own README:
 
@@ -156,9 +157,12 @@ python examples/custom-pipeline/full_pipeline.py episode.mp4
 
 See the [examples README](examples/README.md) for the full directory map.
 
+</details>
+
 ---
 
-## Documentation
+<details>
+<summary><b>Documentation</b></summary>
 
 | | |
 |---|---|
@@ -170,9 +174,12 @@ See the [examples README](examples/README.md) for the full directory map.
 | [Contributing](docs/contributing.md) | Project structure, guidelines, links |
 | [AI Setup](docs/ai-setup.md) | How to train AI tools to work like you, not generically |
 
+</details>
+
 ---
 
-## AI Agents
+<details>
+<summary><b>AI Agents</b></summary>
 
 An [AGENTS.md](AGENTS.md) file is included for AI coding assistants (OpenCode, Claude Code, Cursor, etc.).
 
@@ -180,18 +187,26 @@ Using AI without understanding the codebase is not recommended. Read the code, u
 
 The best approach is not to use a generic AI assistant - it is to train it to work like you. Teach it your conventions, your decisions, your style. Done right, the output looks like yours, not like a generic answer. See [docs/ai-setup.md](docs/ai-setup.md) for a practical guide on how to do this.
 
+</details>
+
 ---
 
-## Credits
+<details>
+<summary><b>Credits</b></summary>
 
 Built by [Moongetsu](https://github.com/Moongetsu) as a standalone port of the [AMVerge](https://github.com/crptk/AMVerge) backend.
 
 AMVerge was created by [Crptk](https://github.com/crptk). All core scene detection and clip management logic originates from the original AMVerge project.
 
+</details>
+
 ---
 
-## License
+<details>
+<summary><b>License</b></summary>
 
 AMVerge CLI is licensed under the GNU GPL v3.0.
 
 Any derivative work must also be open-source under the same license.
+
+</details>
