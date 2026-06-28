@@ -8,17 +8,18 @@ Usage:
 """
 
 import sys
-import torch
 from pathlib import Path
 from amverge import (
     cut_all_scenes, get_keyframe_timestamps_pyav, check_if_hevc,
+    get_gpu_info,
 )
 
 VIDEO = sys.argv[1] if len(sys.argv) > 1 else "episode.mp4"
 
 kf = get_keyframe_timestamps_pyav(VIDEO)
 is_hevc = check_if_hevc(VIDEO)
-device = "cuda" if torch.cuda.is_available() else "cpu"
+gpu = get_gpu_info()
+device = "cuda" if gpu["cuda_available"] else "cpu"
 
 scenes = [
     {"scene_index": 0, "start_sec": 0.0, "end_sec": 5.0},
