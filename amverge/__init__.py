@@ -25,6 +25,9 @@ from .core.scene_detector import SceneDetector
 # -- Scene exporter -----------------------------------------------------
 from .core.scene_exporter import SceneExporter
 
+# -- Scene cache --------------------------------------------------------
+from .core.scene_cache import SceneCache
+
 # -- Binaries -----------------------------------------------------------
 from .core.binaries import get_binary, get_ffmpeg, get_ffprobe
 
@@ -120,6 +123,8 @@ __all__ = [
     "SceneDetector",
     # Scene exporter
     "SceneExporter",
+    # Scene cache
+    "SceneCache",
     # Binaries
     "get_binary", "get_ffmpeg", "get_ffprobe",
     # Video

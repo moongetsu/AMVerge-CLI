@@ -10,6 +10,7 @@ from .binaries import get_binary, get_ffmpeg, get_ffprobe
 from .codec_utils import check_if_hevc
 from .scene_detector import SceneDetector
 from .scene_exporter import SceneExporter
+from .scene_cache import SceneCache
 from .detection.keyframe import detect_cuts_by_keyframe
 from .detection.edge import detect_cuts_by_edge
 from .diagnostics import get_gpu_info, get_versions
