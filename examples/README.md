@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../AMVerge-CLI.gif" alt="AMVerge CLI" width="1440"/>
+  <img src="../assets/AMVerge-CLI.gif" alt="AMVerge CLI" width="1440"/>
 </p>
 
 <p align="center">
