@@ -37,6 +37,9 @@ from .core.similarity_checker import SimilarityChecker
 # -- Image crop ----------------------------------------------------------
 from .core.image_crop import ImageCrop
 
+# -- TransNetV2 config ---------------------------------------------------
+from .core.transnet_config import TransNetConfig
+
 # -- Binaries -----------------------------------------------------------
 from .core.binaries import get_binary, get_ffmpeg, get_ffprobe
 
@@ -140,6 +143,8 @@ __all__ = [
     "SimilarityChecker",
     # Image crop
     "ImageCrop",
+    # TransNetV2 config
+    "TransNetConfig",
     # Binaries
     "get_binary", "get_ffmpeg", "get_ffprobe",
     # Video
