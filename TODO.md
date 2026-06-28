@@ -26,30 +26,25 @@ video.to_dict()
 
 ---
 
-## 2. Scene Detection
+## 2. Scene Detection ✅
 
-### `SceneDetector` class
+~~`SceneDetector` class~~ Done. `core/scene_detector.py`, exported from `amverge`.
 
 ```python
 from amverge import SceneDetector
 
-detector = SceneDetector(method="transnetv2")
+detector = SceneDetector(method="transnetv2", min_duration=1.0)
 result = detector.detect("episode.mp4")
+print(f"{len(result.scenes)} scenes in {result.detection_time}s")
 
-# Or on a video object:
-video = AmvergeVideo("episode.mp4")
-result = video.detect_scenes(method="keyframe")  # already done
+# Post-processing
+result.filter(min_duration=2.0)
+result.merge_similar()
+result.to_json("cleaned_scenes.json")
 ```
 
 Wraps: `detect_scenes()`, `detect_cuts_by_keyframe()`, `detect_cuts_by_edge()`, V2 pipeline.
-
-### `DetectResult` improvements
-
-```python
-result.filter(min_duration=1.0)
-result.merge_similar(threshold=0.05)
-result.to_json(path)
-```
+Also added `filter()`, `merge_similar()`, `to_json()` methods to `DetectResult`.
 
 ---
 
@@ -173,7 +168,7 @@ config = TransNetConfig()
 | # | Item | Status |
 |---|------|--------|
 | 1 | `AmvergeVideo` | ✅ done |
-| 2 | `SceneDetector` | pending |
+| 2 | `SceneDetector` | ✅ done |
 | 3 | `SceneExporter` | pending |
 | 4 | `SceneCache` | pending |
 | 5 | `ThumbnailGenerator` | pending |
