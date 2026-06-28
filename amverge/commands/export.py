@@ -11,6 +11,7 @@ from typing import Optional
 import typer
 
 from ..core.binaries import get_ffmpeg
+from ..core.discord_rpc import RPC_AVAILABLE, DiscordRPC
 from ..ui import banner, console, err, make_progress, make_table, ok, fail, dim
 
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
@@ -36,6 +37,7 @@ def export(
     select: Optional[str] = typer.Option(None, "--select", help='Indices: "0,2,5-8" (default: all)'),
     merge: bool = typer.Option(False, "--merge", help="Merge selected clips into one file"),
     codec: str = typer.Option("copy", "--codec", help="copy · h264 · hevc"),
+    no_rpc: bool = typer.Option(False, "--no-rpc", help="Disable Discord RPC"),
 ) -> None:
     """Export selected scenes from a detect run."""
     if codec not in VALID_CODECS:
@@ -45,6 +47,11 @@ def export(
         codec = "hevc"
 
     banner("export")
+
+    rpc = DiscordRPC() if RPC_AVAILABLE and not no_rpc else None
+    if rpc:
+        rpc.connect()
+        rpc.update_exporting(video.name)
 
     payload = json.loads(scenes.read_text())
     all_scenes: list[dict] = payload.get("scenes", payload) if isinstance(payload, dict) else payload
@@ -66,10 +73,21 @@ def export(
     output.mkdir(parents=True, exist_ok=True)
     ff = get_ffmpeg()
 
-    if merge:
-        _export_merged(selected, output, ff, codec)
-    else:
-        _export_individual(selected, output, ff, codec)
+    try:
+        if merge:
+            _export_merged(selected, output, ff, codec)
+        else:
+            _export_individual(selected, output, ff, codec)
+        if rpc:
+            rpc.update_complete()
+    except Exception:
+        if rpc:
+            rpc.update_error("Export failed")
+        raise
+    finally:
+        if rpc:
+            rpc.clear_presence()
+            rpc.disconnect()
 
 
 def _copy(src: str, dst: str, ff: str) -> None:

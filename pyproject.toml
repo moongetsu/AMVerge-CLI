@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "amverge"
 version = "0.1.0"
-description = "Scene detection and clip management CLI"
+description = "AMVerge Features as a CLI Tool and Python Library"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "GPL-3.0-or-later" }
@@ -21,8 +21,9 @@ dependencies = [
 amverge = "amverge.cli:app"
 
 [project.optional-dependencies]
-edge = ["opencv-python-headless>=4.9"]
-dev  = ["pyinstaller>=6"]
+edge    = ["opencv-python-headless>=4.9"]
+discord = ["pypresence>=4.3"]
+dev     = ["pyinstaller>=6"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["amverge"]

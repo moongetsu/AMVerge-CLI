@@ -10,6 +10,7 @@ from typing import List
 import typer
 
 from ..core.binaries import get_ffmpeg
+from ..core.discord_rpc import RPC_AVAILABLE, DiscordRPC
 from ..ui import banner, ok, fail
 
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
@@ -18,6 +19,7 @@ CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
 def merge(
     clips: List[Path] = typer.Argument(..., help="Clip files to merge in order"),
     output: Path = typer.Option(..., "--output", "-o", help="Output file"),
+    no_rpc: bool = typer.Option(False, "--no-rpc", help="Disable Discord RPC"),
 ) -> None:
     """Merge multiple clips into one file via FFmpeg concat."""
     for clip in clips:
@@ -26,6 +28,11 @@ def merge(
             raise typer.Exit(1)
 
     banner("merge")
+
+    rpc = DiscordRPC() if RPC_AVAILABLE and not no_rpc else None
+    if rpc:
+        rpc.connect()
+        rpc.update_merging()
 
     ff = get_ffmpeg()
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -43,9 +50,18 @@ def merge(
             check=True,
         )
     except subprocess.CalledProcessError as e:
+        if rpc:
+            rpc.update_error("Merge failed")
+            rpc.clear_presence()
+            rpc.disconnect()
         fail(f"ffmpeg failed: {e.stderr.decode(errors='replace')[-500:]}")
         raise typer.Exit(1)
     finally:
         os.unlink(concat_file)
 
-    ok(f"{len(clips)} clips → {output}")
+    if rpc:
+        rpc.update_complete()
+        rpc.clear_presence()
+        rpc.disconnect()
+
+    ok(f"{len(clips)} clips saved to {output}")

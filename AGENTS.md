@@ -47,6 +47,7 @@ twine upload dist/*
 | Numerics | NumPy |
 | Edge detection | OpenCV (optional, `[edge]` extra) |
 | Package | hatchling, PyPI name `amverge` |
+| Discord RPC | pypresence (optional, `[discord]` extra) |
 
 ## Directory Map
 
@@ -77,8 +78,11 @@ AMVerge-CLI/
 │       ├── segmenter.py     run_ffmpeg_segment() - 1500-cut Windows chunking
 │       ├── thumbnails.py    make_thumbnail(), generate_thumbnails() - ThreadPoolExecutor
 │       ├── similarity.py    find_similar_pairs() - cosine similarity on pixel arrays
-│       ├── hevc.py          is_hevc() - ffprobe codec check
-│       ├── image.py         crop_image() + CropData - supports animated GIF
+│       ├── hevc.py                  is_hevc() - ffprobe codec check
+│       ├── image.py                 crop_image() + CropData - supports animated GIF
+│       ├── ipc.py                   emit_progress() + emit_event() - IPC protocol for Tauri app
+│       ├── thumbnails_streaming.py  streaming thumbnail gen with IPC events (app replacement mode)
+│       ├── discord_rpc.py           DiscordRPC class - pypresence wrapper, CLIENT_ID from AMVerge
 │       └── detection/
 │           ├── keyframe.py  detect_cuts_by_keyframe()
 │           └── edge.py      detect_cuts_by_edge() - guarded cv2 import, clear error if missing
@@ -147,6 +151,9 @@ for scene in result.scenes:
 | `core/detection/edge.py` | `import cv2` is inside the function body, not at module level. Raises clear `ImportError` pointing to `pip install amverge[edge]` if OpenCV missing. Keep it this way - edge is an optional dep. |
 | `wizard.py` | `_credits_table()` is imported from `commands/credits.py` to avoid duplication. The wizard and the direct `amverge credits` command share one table definition. |
 | `ui.py` | `err` console (stderr) used for all interactive/wizard output. `console` (stdout) for command results. Do not mix them. |
+| `core/ipc.py` | IPC protocol for Tauri app. Emits `PROGRESS\|pct\|msg`, `INITIAL_CLIPS_READY\|json`, `THUMBNAIL_READY\|pos`, `PAIR_RESULT\|a\|b\|0or1`, `PROCESSING_COMPLETE` to stderr. stdout is reserved for final JSON. Never mix IPC output with Rich output. |
+| `core/thumbnails_streaming.py` | Used only in `--ipc` mode. Emits events as each thumbnail completes. Do not use in normal CLI mode - use `core/thumbnails.py` there. |
+| `core/discord_rpc.py` | Uses same CLIENT_ID as AMVerge app (`1497922104065134823`). Silently no-ops if pypresence not installed. Auto-connects per command. `--no-rpc` flag on detect/export/merge to disable. |
 
 ## Theme
 
