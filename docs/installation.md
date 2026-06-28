@@ -7,25 +7,55 @@
 
 ---
 
-## Install
+## Quick Install
 
 ```bash
 pip install amverge
 ```
 
-That's it for the base install. Covers `detect` (keyframe method), `export`, `merge`, and `info`.
+Covers `detect` (keyframe method), `export`, `merge`, and `info`.
 
 ---
 
-## Edge Detection (Optional)
+## Extras
 
-The `edge` detection method requires OpenCV:
+### TransNetV2 ML Detection
+
+```bash
+pip install amverge[ml]
+```
+
+Adds PyTorch + TransNetV2 scene detection (GPU auto-detected, CPU fallback).
+
+```bash
+amverge detect episode.mkv --method transnetv2
+```
+
+### Edge Detection
 
 ```bash
 pip install amverge[edge]
 ```
 
-Only needed if you plan to use `--method edge`. See [detection-methods.md](detection-methods.md) for when it's worth it.
+Adds OpenCV for Canny edge-based cut detection.
+
+```bash
+amverge detect episode.mkv --method edge
+```
+
+### Discord Rich Presence
+
+```bash
+pip install amverge[discord]
+```
+
+Adds pypresence for Discord RPC status updates during long operations.
+
+### All at once
+
+```bash
+pip install amverge[ml,edge,discord]
+```
 
 ---
 
@@ -53,15 +83,21 @@ sudo apt install ffmpeg
 
 ---
 
-## Development Install
+## Verify Install
 
-Clone and install in editable mode:
+```bash
+amverge doctor    # full health check - shows what is installed and working
+amverge gpu       # PyTorch + CUDA + GPU info
+amverge version   # all dependency versions
+```
+
+---
+
+## Development Install
 
 ```bash
 git clone https://github.com/moongetsu/AMVerge-CLI
 cd AMVerge-CLI
 pip install -e .
-
-# With edge support:
-pip install -e ".[edge]"
+pip install -e ".[ml,edge,discord]"
 ```
