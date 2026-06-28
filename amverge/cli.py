@@ -4,11 +4,16 @@ from .commands.detect import detect
 from .commands.export import export
 from .commands.merge import merge
 from .commands.info import info
+from .commands.probe import probe
+from .commands.cache import cache
+from .commands.keyframes import keyframes
+from .commands.scenes import scenes
 from .commands.about import about
 from .commands.credits import credits
 from .commands.changelog import changelog
 from .commands.usage import usage
 from .commands.backend import backend
+from .commands.rpc_server import rpc_server
 
 app = typer.Typer(
     name="amverge",
@@ -22,9 +27,14 @@ app.command()(detect)
 app.command()(export)
 app.command()(merge)
 app.command()(info)
+app.command()(probe)
+app.command()(cache)
+app.command()(keyframes)
+app.command()(scenes)
 
 # App backend replacement (hidden - called by Rust sidecar)
 app.command(hidden=True)(backend)
+app.command(name="rpc-server", hidden=True)(rpc_server)
 
 # Info
 app.command()(usage)

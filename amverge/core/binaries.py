@@ -1,36 +1,58 @@
+from __future__ import annotations
+
+import os
 import sys
 from pathlib import Path
 from shutil import which
 
+if getattr(sys, "frozen", False):
+    _ROOT = Path(sys.executable).resolve().parent
+else:
+    _ROOT = Path(__file__).resolve().parent.parent
 
-def _find(name: str) -> str:
-    """Find ffmpeg/ffprobe: PATH first, then common local layouts."""
-    exe = name + (".exe" if sys.platform == "win32" else "")
 
-    found = which(exe) or which(name)
-    if found:
-        p = Path(found)
-        if p.is_absolute() and p.exists():
-            return str(p)
+def _platform_names(name: str) -> list[str]:
+    if os.name == "nt" and not name.lower().endswith(".exe"):
+        return [f"{name}.exe", name]
+    return [name]
 
-    cwd = Path.cwd()
-    candidates = [
-        cwd / exe,
-        cwd / name,
-        cwd / "bin" / exe,
-        cwd / "bin" / name,
+
+def get_binary(name: str) -> str:
+    search_dirs = [
+        _ROOT / "_internal",
+        _ROOT,
+        _ROOT / "bin",
     ]
 
-    for c in candidates:
-        if c.exists():
-            return str(c)
+    if getattr(sys, "frozen", False):
+        exe_dir = Path(sys.executable).resolve().parent
+        search_dirs.extend([
+            exe_dir / "_internal",
+            exe_dir,
+            exe_dir / "bin",
+        ])
 
-    return exe  # let subprocess raise a clear error
+    names = _platform_names(name)
+
+    for directory in search_dirs:
+        for candidate_name in names:
+            candidate = directory / candidate_name
+            if candidate.exists():
+                return str(candidate)
+
+    for candidate_name in names:
+        found = which(candidate_name)
+        if found:
+            found_path = Path(found)
+            if found_path.is_absolute() and found_path.exists():
+                return str(found_path)
+
+    return str(search_dirs[0] / names[0])
 
 
 def get_ffmpeg() -> str:
-    return _find("ffmpeg")
+    return get_binary("ffmpeg")
 
 
 def get_ffprobe() -> str:
-    return _find("ffprobe")
+    return get_binary("ffprobe")
