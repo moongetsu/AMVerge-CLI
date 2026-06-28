@@ -1,6 +1,17 @@
-# Scene Detection
+<p align="center">
+  <img src="../../assets/amverge_title_gif.gif" alt="AMVerge CLI" width="1440"/>
+</p>
 
-Split a video into scenes at cut boundaries using AMVerge's detection engine.
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11+-blue?style=flat-square" alt="Python"/>
+  <img src="https://img.shields.io/badge/pypi-amverge-22c55e?style=flat-square" alt="PyPI"/>
+  <img src="https://img.shields.io/badge/license-GPL--3.0-22c55e?style=flat-square" alt="License"/>
+</p>
+
+# Scene Detection Examples
+
+**Split a video into scenes at cut boundaries.**  
+Use keyframe analysis (fast), Canny edge detection (accurate), or TransNetV2 ML (best).
 
 ---
 
@@ -18,24 +29,45 @@ ffmpeg segment or smart cut
 .mp4 clips + .jpg thumbnails + scenes.json
 ```
 
+Detection extracts scene boundaries, then segments the video with stream copy (lossless)
+or smart cut (partial re-encode for non-keyframe-aligned cuts).
+
 ---
 
 ## Examples
 
-| file | method | deps |
+| File | Method | Dependencies |
 |---|---|---|
 | [01_basic_detect.py](01_basic_detect.py) | keyframe (default) | none |
-| [02_transnetv2_detect.py](02_transnetv2_detect.py) | TransNetV2 ML | `[ml]` |
-| [03_edge_detect.py](03_edge_detect.py) | Canny edge + cosine | `[edge]` |
+| [02_transnetv2_detect.py](02_transnetv2_detect.py) | TransNetV2 ML | `pip install amverge[ml]` |
+| [03_edge_detect.py](03_edge_detect.py) | Canny edge + cosine | `pip install amverge[edge]` |
 | [04_custom_settings.py](04_custom_settings.py) | keyframe with custom params | none |
 
 ---
 
-## Quick Run
+## Quick Start
 
 ```bash
+pip install amverge
+
+# Basic keyframe detection
 python examples/detect/01_basic_detect.py episode.mp4
+
+# ML detection (best accuracy)
+pip install amverge[ml]
 python examples/detect/02_transnetv2_detect.py episode.mp4
+
+# Edge detection
+pip install amverge[edge]
+python examples/detect/03_edge_detect.py episode.mp4
 ```
 
-Output goes to `<video_name>_scenes/` with clips, thumbnails, and a `scenes.json` index.
+---
+
+## See Also
+
+| | |
+|---|---|
+| [Library API](../../docs/library.md) | `detect_scenes()` reference |
+| [Detection Methods](../../docs/detection-methods.md) | method comparison |
+| [CLI Reference](../../docs/cli-reference.md) | `amverge detect` command |

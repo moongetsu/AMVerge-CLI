@@ -1,17 +1,30 @@
+<p align="center">
+  <img src="../assets/amverge_title_gif.gif" alt="AMVerge CLI" width="1440"/>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/python-3.11+-blue?style=flat-square" alt="Python"/>
+  <img src="https://img.shields.io/badge/pypi-amverge-22c55e?style=flat-square" alt="PyPI"/>
+  <img src="https://img.shields.io/badge/license-GPL--3.0-22c55e?style=flat-square" alt="License"/>
+</p>
+
 # Examples
 
-Runnable Python scripts showing how to use AMVerge as a library.
-Each subdirectory covers one feature area with its own README.
+**Runnable Python scripts showing how to use AMVerge as a library.**  
+Each subdirectory covers one feature area with its own README, diagrams, and examples.
 
 ---
 
 ## How to Run
 
-Install AMVerge first:
+Install AMVerge with the dependencies you need:
 
 ```bash
-pip install amverge[ml]        # TransNetV2 examples need [ml]
-pip install amverge[ml,edge]   # all examples
+pip install amverge               # basic (keyframe, export, merge, info)
+pip install amverge[ml]           # + TransNetV2 ML detection
+pip install amverge[edge]         # + Canny edge detection
+pip install amverge[discord]      # + Discord Rich Presence
+pip install amverge[ml,edge,discord]  # everything
 ```
 
 Then run any script:
@@ -20,14 +33,13 @@ Then run any script:
 python examples/detect/01_basic_detect.py
 ```
 
-Scripts expect a video file. Edit the `VIDEO` variable at the top of each file
-or pass the video path as a command-line argument.
+Scripts accept a video path as command-line argument. If none given, defaults to `episode.mp4` in the working directory.
 
 ---
 
 ## Directory Map
 
-| directory | what it covers | needs |
+| Directory | What It Covers | Needs |
 |---|---|---|
 | [detect/](detect/) | scene detection: keyframe, edge, TransNetV2 | [edge], [ml] for some |
 | [export/](export/) | export clips, re-encode, merge, codec selection | - |
@@ -39,3 +51,63 @@ or pass the video path as a command-line argument.
 | [diagnostics/](diagnostics/) | GPU check, version info, health check | - |
 | [discord-rpc/](discord-rpc/) | Discord Rich Presence status updates | [discord] |
 | [custom-pipeline/](custom-pipeline/) | full end-to-end pipeline from scratch | [ml] |
+
+---
+
+## Structure
+
+```txt
+examples/
+├── detect/
+│   ├── README.md
+│   ├── 01_basic_detect.py
+│   ├── 02_transnetv2_detect.py
+│   ├── 03_edge_detect.py
+│   └── 04_custom_settings.py
+├── export/
+│   ├── README.md
+│   ├── 01_copy_export.py
+│   ├── 02_reencode_export.py
+│   └── 03_merge_export.py
+├── info-probe/
+│   ├── README.md
+│   ├── 01_video_info.py
+│   ├── 02_probe.py
+│   └── 03_hevc_check.py
+├── keyframes/
+│   ├── README.md
+│   ├── 01_extract_keyframes.py
+│   └── 02_align_scenes.py
+├── cutting/
+│   ├── README.md
+│   ├── 01_smart_cut.py
+│   ├── 02_ffmpeg_segment.py
+│   └── 03_single_scene.py
+├── thumbnails/
+│   ├── README.md
+│   └── 01_make_thumbnails.py
+├── similarity/
+│   ├── README.md
+│   └── 01_find_similar.py
+├── diagnostics/
+│   ├── README.md
+│   ├── 01_gpu_check.py
+│   └── 02_version_info.py
+├── discord-rpc/
+│   ├── README.md
+│   └── 01_basic_rpc.py
+├── custom-pipeline/
+│   ├── README.md
+│   └── full_pipeline.py
+└── README.md
+```
+
+---
+
+## See Also
+
+| | |
+|---|---|
+| [Library API](../docs/library.md) | complete Python library reference |
+| [CLI Reference](../docs/cli-reference.md) | all commands and flags |
+| [Detection Methods](../docs/detection-methods.md) | method comparison and tuning |
