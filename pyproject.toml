@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "amverge-cli"
+name = "amverge"
 version = "0.1.0"
 description = "Scene detection and clip management CLI"
 readme = "README.md"
