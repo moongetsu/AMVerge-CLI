@@ -12,9 +12,8 @@ import subprocess
 from pathlib import Path
 from amverge import (
     get_ffmpeg, check_if_hevc,
-    CODEC_PROFILES, CODEC_ALIASES, AUDIO_FFMPEG,
+    CODEC_PROFILES, CODEC_ALIASES, AUDIO_FFMPEG, resolve_gpu,
 )
-from amverge.core.codec_utils import _resolve_gpu
 
 VIDEO = sys.argv[1] if len(sys.argv) > 1 else "episode.mp4"
 SCENES_JSON = sys.argv[2] if len(sys.argv) > 2 else "episode_scenes/scenes.json"
@@ -31,7 +30,7 @@ hardware = "auto"
 container = "mp4"
 
 codec_name = CODEC_ALIASES.get(codec_name, codec_name)
-use_gpu = _resolve_gpu(hardware, codec_name)
+use_gpu = resolve_gpu(hardware, codec_name)
 profile = CODEC_PROFILES[codec_name]
 encoder = profile["gpu"] if use_gpu and profile["gpu"] else profile["cpu"]
 audio_args = AUDIO_FFMPEG[audio_name]

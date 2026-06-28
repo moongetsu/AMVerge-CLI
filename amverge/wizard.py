@@ -302,9 +302,9 @@ def _wizard_export() -> None:
     CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
     import subprocess
 
-    from .core.codec_utils import AUDIO_FFMPEG, CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, _resolve_gpu
+    from .core.codec_utils import AUDIO_FFMPEG, CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, resolve_gpu
     codec = CODEC_ALIASES.get(codec, codec)
-    use_gpu = _resolve_gpu(hardware, codec)
+    use_gpu = resolve_gpu(hardware, codec)
 
     if merge:
         with make_progress() as progress:

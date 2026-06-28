@@ -7,28 +7,20 @@ Usage:
 """
 
 import sys
-import amverge
+from amverge import get_versions
 
-print(f"AMVerge CLI  {amverge.__version__}")
+versions = get_versions()
+
+print(f"AMVerge CLI  {versions['amverge']}")
 print(f"Python       {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
 print(f"Platform     {sys.platform}")
 print()
 
-deps = ["av", "numpy", "pillow", "rich", "typer"]
-for name in deps:
-    try:
-        mod = __import__(name)
-        ver = getattr(mod, "__version__", "unknown")
-        print(f"{name:12s} v{ver}")
-    except ImportError:
-        print(f"{name:12s} not installed")
+for name in ["av", "numpy", "pillow", "rich", "typer"]:
+    ver = versions.get(name)
+    print(f"{name:12s} {f'v{ver}' if ver else 'not installed'}")
 
-optional = ["torch", "transnetv2_pytorch", "tqdm", "cv2", "pypresence"]
 print()
-for name in optional:
-    try:
-        mod = __import__(name)
-        ver = getattr(mod, "__version__", "installed")
-        print(f"{name:12s} v{ver}")
-    except ImportError:
-        print(f"{name:12s} not installed")
+for name in ["torch", "transnetv2_pytorch", "tqdm", "cv2", "pypresence"]:
+    ver = versions.get(name)
+    print(f"{name:12s} {f'v{ver}' if ver else 'not installed'}")

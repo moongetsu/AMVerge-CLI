@@ -15,7 +15,7 @@ from ..core.discord_rpc import RPC_AVAILABLE, DiscordRPC
 from ..core.codec_utils import (
     VALID_CODECS, VALID_AUDIO, VALID_CONTAINERS, VALID_HARDWARE,
     CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, AUDIO_FFMPEG,
-    _resolve_gpu,
+    resolve_gpu,
 )
 from ..ui import banner, console, err, make_progress, make_table, ok, fail, dim
 
@@ -49,7 +49,7 @@ def export(
         raise typer.Exit(1)
 
     codec = CODEC_ALIASES.get(codec, codec)
-    use_gpu = _resolve_gpu(hardware, codec)
+    use_gpu = resolve_gpu(hardware, codec)
     if codec in PRORES_CODECS and container != "mov":
         fail(f"Codec '{codec}' requires --container mov")
         raise typer.Exit(1)

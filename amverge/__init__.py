@@ -69,11 +69,15 @@ from .core.codec_utils import (
     check_if_hevc,
     VALID_CODECS, VALID_AUDIO, VALID_CONTAINERS, VALID_HARDWARE,
     CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, AUDIO_FFMPEG,
+    resolve_gpu,
 )
 from .core.hevc import is_hevc
 
 # -- Image --------------------------------------------------------------
 from .core.image import CropData, crop_image
+
+# -- Diagnostics -------------------------------------------------------
+from .core.diagnostics import get_gpu_info, get_versions
 
 # -- IPC ----------------------------------------------------------------
 from .core.ipc import (
@@ -129,8 +133,11 @@ __all__ = [
     "check_if_hevc", "is_hevc",
     "VALID_CODECS", "VALID_AUDIO", "VALID_CONTAINERS", "VALID_HARDWARE",
     "CODEC_ALIASES", "CODEC_PROFILES", "PRORES_CODECS", "AUDIO_FFMPEG",
+    "resolve_gpu",
     # Image
     "CropData", "crop_image",
+    # Diagnostics
+    "get_gpu_info", "get_versions",
     # IPC
     "emit_progress", "emit_event", "log",
     "check_if_path_exists", "build_video_cache_prefix",

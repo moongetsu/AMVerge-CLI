@@ -9,6 +9,7 @@ from .binaries import get_binary, get_ffmpeg, get_ffprobe
 from .codec_utils import check_if_hevc
 from .detection.keyframe import detect_cuts_by_keyframe
 from .detection.edge import detect_cuts_by_edge
+from .diagnostics import get_gpu_info, get_versions
 from .discord_rpc import RPC_AVAILABLE, DiscordRPC
 from .hevc import is_hevc
 from .image import CropData, crop_image

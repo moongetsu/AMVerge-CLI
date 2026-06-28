@@ -72,7 +72,24 @@ AUDIO_FFMPEG: dict[str, list[str]] = {
 }
 
 
-def _resolve_gpu(hardware: str, codec: str) -> bool:
+def resolve_gpu(hardware: str, codec: str) -> bool:
+    """Determine whether to use GPU-accelerated encoding.
+
+    Returns False for copy codec, ProRes codecs, or ``hardware="cpu"``.
+    Returns True for ``hardware="gpu"``. For ``hardware="auto"``, probes
+    ``torch.cuda.is_available()``.
+
+    Args:
+        hardware: ``"auto"``, ``"gpu"``, or ``"cpu"``.
+        codec: Codec profile key (e.g. ``"h264_main"``).
+
+    Returns:
+        True if GPU encoding should be used.
+
+    Example:
+        >>> resolve_gpu("auto", "h264_main")
+        True  # if CUDA available
+    """
     if codec == "copy":
         return False
     if codec in PRORES_CODECS:
