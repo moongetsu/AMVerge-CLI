@@ -67,6 +67,27 @@ def generate_keyframes(
     progress_range: int = 30,
     progress_interval_s: float = 1.0,
 ) -> list[float]:
+    """Extract keyframe timestamps via PyAV packet demux (V1 pipeline).
+
+    Fast path reads packet metadata only (no frame decode). Falls back to
+    full decode for pathological encodes. Deduplicates I-frames within
+    short windows.
+
+    Args:
+        video_path: Path to the source video file.
+        progress_cb: Optional ``callback(percent: int, message: str)``.
+        progress_base: Starting percentage for progress reporting.
+        progress_range: Total progress range span.
+        progress_interval_s: Minimum seconds between progress updates.
+
+    Returns:
+        Sorted list of unique keyframe timestamps in seconds.
+
+    Example:
+        >>> from amverge.core.keyframes import generate_keyframes
+        >>> kf = generate_keyframes("episode.mp4")
+        >>> print(f"{len(kf)} keyframes found")
+    """
     start_time = time.monotonic()
     last_emit = start_time - 9999.0
 

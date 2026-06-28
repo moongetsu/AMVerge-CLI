@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+"""ffprobe wrappers for video metadata.
+
+Convenience functions that shell out to ffprobe for common probe queries.
+All functions accept a ``str`` or ``Path`` and return typed values.
+
+Example:
+    >>> from amverge.core.probe_utils import probe_video_fps, probe_video_dimensions
+    >>> fps = probe_video_fps("episode.mp4")
+    >>> w, h = probe_video_dimensions("episode.mp4")
+"""
+
 import subprocess
 from pathlib import Path
 
@@ -7,6 +18,11 @@ from .binaries import get_ffprobe
 
 
 def probe_video_fps(input_video: str | Path) -> float:
+    """Get the frame rate of the first video stream.
+
+    Returns:
+        FPS as a float (e.g. 23.976, 24.0, 30.0).
+    """
     cmd = [
         get_ffprobe(),
         "-v", "error",
@@ -21,6 +37,11 @@ def probe_video_fps(input_video: str | Path) -> float:
 
 
 def probe_video_dimensions(input_video: str | Path) -> tuple[int, int]:
+    """Get the width and height of the first video stream.
+
+    Returns:
+        ``(width, height)`` tuple in pixels.
+    """
     cmd = [
         get_ffprobe(),
         "-v", "error",
@@ -35,6 +56,11 @@ def probe_video_dimensions(input_video: str | Path) -> tuple[int, int]:
 
 
 def probe_video_duration(input_video: str | Path) -> float:
+    """Get the total duration of the video.
+
+    Returns:
+        Duration in seconds as a float.
+    """
     cmd = [
         get_ffprobe(),
         "-v", "error",
@@ -47,4 +73,13 @@ def probe_video_duration(input_video: str | Path) -> float:
 
 
 def probe_video_total_frames(input_video: str | Path, video_fps: float, video_duration: float) -> int:
+    """Estimate total frame count from FPS and duration.
+
+    Args:
+        video_fps: Frame rate from :func:`probe_video_fps`.
+        video_duration: Duration from :func:`probe_video_duration`.
+
+    Returns:
+        Estimated frame count as ``int(fps * duration)``.
+    """
     return int(video_fps * video_duration)

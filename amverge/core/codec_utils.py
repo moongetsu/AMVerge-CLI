@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Codec detection utilities."""
+
 import subprocess
 from pathlib import Path
 
@@ -7,6 +9,24 @@ from .binaries import get_ffprobe
 
 
 def check_if_hevc(video: str | Path) -> bool:
+    """Check if a video file is HEVC (H.265) encoded.
+
+    Uses ffprobe to probe the first video stream's codec name.
+
+    Args:
+        video: Path to the video file.
+
+    Returns:
+        True if the video codec is ``"hevc"``, False otherwise.
+
+    Raises:
+        ValueError: If ``video`` is an empty string.
+        RuntimeError: If ffprobe exits with a non-zero code.
+
+    Example:
+        >>> check_if_hevc("episode.mp4")
+        False
+    """
     path = str(video)
     if not path.strip():
         raise ValueError("No video path provided")

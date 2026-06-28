@@ -9,6 +9,17 @@ from PIL import Image, ImageOps, ImageSequence
 
 @dataclass
 class CropData:
+    """Crop rectangle with optional rotation and flips.
+
+    Attributes:
+        x: Left offset in pixels.
+        y: Top offset in pixels.
+        width: Crop width in pixels.
+        height: Crop height in pixels.
+        rotation: Rotation angle in degrees (default 0).
+        flip_h: Horizontal flip (default False).
+        flip_v: Vertical flip (default False).
+    """
     x: float
     y: float
     width: float
@@ -19,6 +30,7 @@ class CropData:
 
     @classmethod
     def from_dict(cls, d: dict) -> "CropData":
+        """Create from a dict with expected keys. Missing keys get defaults."""
         return cls(
             x=d["x"], y=d["y"],
             width=d["width"], height=d["height"],

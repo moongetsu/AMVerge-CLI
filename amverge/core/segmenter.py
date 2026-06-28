@@ -76,6 +76,17 @@ def run_ffmpeg_segment(
     cut_points: list[float],
     ffmpeg: str | None = None,
 ) -> None:
+    """Cut a video at specified timestamps using FFmpeg segment muxer.
+
+    Uses stream copy (no re-encode) with AAC audio. Chunks into 1500-cut
+    batches to stay under the Windows 32,767-char command line limit.
+
+    Args:
+        video_path: Path to the source video.
+        output_pattern: FFmpeg output pattern (e.g. ``"out_%04d.mp4"``).
+        cut_points: Sorted list of cut timestamps in seconds.
+        ffmpeg: Optional path to ffmpeg binary. Auto-detected if None.
+    """
     ff = ffmpeg or get_ffmpeg()
 
     if len(cut_points) <= CHUNK_SIZE:
@@ -96,6 +107,21 @@ def collect_scenes(
     cut_points: list[float],
     total_duration: float,
 ) -> list[dict[str, Any]]:
+    """Build scene metadata list from output directory and cut points.
+
+    Scans ``output_dir`` for ``{file_name}_{index:04d}.mp4`` files and
+    builds a dict per scene with timing, path, and thumbnail info.
+
+    Args:
+        output_dir: Directory containing segmented clip files.
+        file_name: Base name for clips (usually the video stem).
+        cut_points: Sorted cut timestamps used for segmentation.
+        total_duration: Total video duration in seconds.
+
+    Returns:
+        List of scene dicts with keys: ``scene_index``, ``start``,
+        ``end``, ``duration``, ``path``, ``thumbnail``, ``original_file``.
+    """
     scenes: list[dict[str, Any]] = []
     boundaries = [0.0] + cut_points
     all_boundaries = boundaries + [total_duration]

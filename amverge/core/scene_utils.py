@@ -1,17 +1,52 @@
 from __future__ import annotations
 
+"""Scene array conversion utilities.
+
+Converts between frame-based scene arrays (from TransNetV2) and
+second-based scene arrays, and builds structured scene dict lists.
+
+Example:
+    >>> from amverge.core.scene_utils import scenes_to_objects
+    >>> import numpy as np
+    >>> scenes_secs = np.array([[0.0, 5.0], [5.0, 10.0]])
+    >>> scenes_frames = np.array([[0, 120], [120, 240]])
+    >>> objs = scenes_to_objects(scenes_secs, scenes_frames)
+    >>> objs[0]["scene_index"]
+    0
+"""
+
 import numpy as np
 
 from .probe_utils import probe_video_fps
 
 
 def scenes_frames_to_seconds(scenes: np.ndarray, fps: float) -> np.ndarray:
+    """Convert frame-based scene boundaries to seconds.
+
+    Args:
+        scenes: ``(N, 2)`` ndarray of ``[start_frame, end_frame]``.
+        fps: Video frame rate.
+
+    Returns:
+        ``(N, 2)`` ndarray of ``[start_sec, end_sec]`` rounded to 2 decimals.
+    """
     return np.round(scenes / fps, 2)
 
 
 def convert_scenes_to_timestamps(
     src_video: str, scenes: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Extract cut point timestamps from a scene array.
+
+    Cut points are the end frames of all but the last scene.
+
+    Args:
+        src_video: Path to video (for FPS probe).
+        scenes: ``(N, 2)`` ndarray of ``[start_frame, end_frame]``.
+
+    Returns:
+        Tuple of ``(timestamps_sec, cut_frames)``.
+    """
     fps = probe_video_fps(src_video)
     cuts = scenes[:-1, 1]
     timestamps = cuts / fps
@@ -21,6 +56,16 @@ def convert_scenes_to_timestamps(
 def scenes_to_objects(
     scenes_secs: np.ndarray, scenes_frames: np.ndarray
 ) -> list[dict]:
+    """Build a list of scene dicts from second and frame arrays.
+
+    Args:
+        scenes_secs: ``(N, 2)`` ndarray of ``[start_sec, end_sec]``.
+        scenes_frames: ``(N, 2)`` ndarray of ``[start_frame, end_frame]``.
+
+    Returns:
+        List of dicts with keys: ``scene_index``, ``start_sec``,
+        ``end_sec``, ``duration_sec``, ``start_frame``, ``end_frame``.
+    """
     scenes: list[dict] = []
     total = min(len(scenes_secs), len(scenes_frames))
     for scene_index in range(total):

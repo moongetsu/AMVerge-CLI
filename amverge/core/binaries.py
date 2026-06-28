@@ -1,5 +1,18 @@
 from __future__ import annotations
 
+"""FFmpeg/ffprobe binary resolution.
+
+Searches for ffmpeg and ffprobe executables in frozen build directories
+(PyInstaller _internal), the project root, ``bin/`` subdirectories, and
+finally the system PATH. If nothing is found, returns a path that will
+produce a clear error when used.
+
+Example:
+    >>> from amverge.core.binaries import get_ffmpeg, get_ffprobe
+    >>> ffmpeg = get_ffmpeg()
+    >>> ffprobe = get_ffprobe()
+"""
+
 import os
 import sys
 from pathlib import Path
@@ -18,6 +31,18 @@ def _platform_names(name: str) -> list[str]:
 
 
 def get_binary(name: str) -> str:
+    """Resolve a binary executable by name.
+
+    Searches: frozen bundle (_internal/), project root, bin/, then PATH.
+    Returns the first match or a best-guess path (caller should verify).
+
+    Args:
+        name: Executable name (e.g. ``"ffmpeg"``, ``"ffprobe"``).
+
+    Returns:
+        Absolute path to the binary if found, or the first search path
+        joined with the name as a fallback.
+    """
     search_dirs = [
         _ROOT / "_internal",
         _ROOT,
@@ -51,8 +76,10 @@ def get_binary(name: str) -> str:
 
 
 def get_ffmpeg() -> str:
+    """Resolve the ffmpeg binary path. See :func:`get_binary`."""
     return get_binary("ffmpeg")
 
 
 def get_ffprobe() -> str:
+    """Resolve the ffprobe binary path. See :func:`get_binary`."""
     return get_binary("ffprobe")
