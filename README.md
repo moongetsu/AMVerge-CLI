@@ -17,15 +17,22 @@ Port of the AMVerge desktop app backend by [Crptk](https://github.com/crptk). Sp
 
 ## Features
 
-- Keyframe-based scene splitting (fast, no re-encode)
-- Edge + cosine-similarity detection for difficult encodes
-- Auto-generated scene thumbnails
-- Duplicate / similar scene detection
-- Scene export with codec selection
+- **TransNetV2 ML detection** - deep learning scene boundary detection (GPU/CPU)
+- **Keyframe detection** - fast I-frame based splitting, no re-encode
+- **Edge detection** - Canny edges + cosine similarity for difficult encodes
+- **Smart cut** - automatic lossless copy / smartcut / re-encode per scene
+- **15 codec profiles** - H.264, HEVC, AV1, ProRes with hardware (NVENC) support
+- **10 audio codecs** - AAC, FLAC, Opus, PCM, MP3, pass-through
+- **3 container formats** - MP4, MKV, MOV (ProRes auto-enforces MOV)
+- Auto-generated scene thumbnails (progressive JPEG)
+- Duplicate / similar scene detection (cosine similarity)
+- Scene export with full codec + audio + hardware selection
 - Clip merging via FFmpeg concat
-- Video metadata inspection
+- Video metadata inspection and diagnostics
+- TransNetV2 scene cache (.npy) - skip re-detection on re-open
+- Discord Rich Presence (same app ID as AMVerge desktop)
 - Interactive wizard mode (`amverge` with no args)
-- Usable as a Python library
+- Fully usable as a Python library - 52 names from `import amverge`
 
 ---
 
@@ -36,12 +43,19 @@ amverge CLI  /  Python library
           ↓
    amverge package
           ↓
-    PyAV  +  FFmpeg
+    PyAV  +  FFmpeg  +  PyTorch (optional)
 ```
 
-Detection extracts keyframe timestamps via PyAV, filters short scenes, then segments using `ffmpeg -segment_times` with stream copy.  
-Thumbnails are decoded via PyAV and written as JPEG in parallel.  
-Similarity compares adjacent thumbnails using cosine similarity on pixel arrays.
+**Detection:** Keyframe mode extracts I-frame timestamps via PyAV packet demux.  
+Edge mode decodes frames and compares Canny edge maps.  
+TransNetV2 runs a deep CNN on 48x27 RGB frames (GPU auto-detected, CPU fallback).
+
+**Cutting:** Scenes aligned to keyframes get lossless stream copy.  
+Non-aligned scenes get smartcut (encode head + copy tail) or full re-encode.  
+HEVC on CPU uses snapped-copy (nearest keyframe within 5s) to avoid slow re-encode.
+
+**Thumbnails:** Decoded via PyAV, resized to 960px, saved as progressive JPEG in parallel.  
+**Similarity:** Adjacent thumbnails compared via cosine similarity on 8x8 pooled pixels.
 
 ---
 
@@ -64,6 +78,18 @@ AMVerge-CLI/
 │   ├── library.md
 │   ├── detection-methods.md
 │   └── contributing.md
+│
+├── examples/
+│   ├── detect/          scene detection scripts
+│   ├── export/          export + re-encode scripts
+│   ├── info-probe/      metadata + diagnostics
+│   ├── keyframes/       extraction + alignment
+│   ├── cutting/         smart cut + segment
+│   ├── thumbnails/      JPEG generation
+│   ├── similarity/      pair detection
+│   ├── diagnostics/     GPU + versions
+│   ├── discord-rpc/     Rich Presence
+│   └── custom-pipeline/ full end-to-end
 │
 ├── assets/
 ├── pyproject.toml
@@ -105,6 +131,33 @@ for scene in result.scenes:
 
 ---
 
+## Examples
+
+Runnable Python scripts for every feature. Each with its own README:
+
+| Directory | Description |
+|---|---|
+| [detect/](examples/detect/) | keyframe, edge, TransNetV2 detection |
+| [export/](examples/export/) | copy, re-encode with profiles, merge |
+| [info-probe/](examples/info-probe/) | stream metadata, probe diagnostics, HEVC check |
+| [keyframes/](examples/keyframes/) | extract timestamps, classify for cutting |
+| [cutting/](examples/cutting/) | smart cut, ffmpeg segment, single scene |
+| [thumbnails/](examples/thumbnails/) | JPEG thumbnail generation |
+| [similarity/](examples/similarity/) | adjacent scene similarity detection |
+| [diagnostics/](examples/diagnostics/) | GPU, CUDA, dependency versions |
+| [discord-rpc/](examples/discord-rpc/) | Discord Rich Presence |
+| [custom-pipeline/](examples/custom-pipeline/) | full end-to-end custom pipeline |
+
+```bash
+pip install amverge[ml,edge,discord]
+python examples/detect/01_basic_detect.py episode.mp4
+python examples/custom-pipeline/full_pipeline.py episode.mp4
+```
+
+See the [examples README](examples/README.md) for the full directory map.
+
+---
+
 ## Documentation
 
 | | |
@@ -112,7 +165,8 @@ for scene in result.scenes:
 | [Installation](docs/installation.md) | Requirements, FFmpeg setup, optional deps, dev install |
 | [CLI Reference](docs/cli-reference.md) | All commands, flags, and usage examples |
 | [Python Library](docs/library.md) | API reference, return types, low-level modules |
-| [Detection Methods](docs/detection-methods.md) | Keyframe vs edge, tuning parameters |
+| [Detection Methods](docs/detection-methods.md) | Keyframe vs edge vs TransNetV2, cut modes, tuning |
+| [Examples](examples/) | 20 runnable Python scripts in 10 categories |
 | [Contributing](docs/contributing.md) | Project structure, guidelines, links |
 | [AI Setup](docs/ai-setup.md) | How to train AI tools to work like you, not generically |
 
