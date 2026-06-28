@@ -48,9 +48,9 @@ Also added `filter()`, `merge_similar()`, `to_json()` methods to `DetectResult`.
 
 ---
 
-## 3. Export / Encoding
+## 3. Export / Encoding ✅
 
-### `SceneExporter` class
+~~`SceneExporter` class~~ Done. `core/scene_exporter.py`, exported from `amverge`.
 
 ```python
 from amverge import SceneExporter
@@ -169,7 +169,7 @@ config = TransNetConfig()
 |---|------|--------|
 | 1 | `AmvergeVideo` | ✅ done |
 | 2 | `SceneDetector` | ✅ done |
-| 3 | `SceneExporter` | pending |
+| 3 | `SceneExporter` | ✅ done |
 | 4 | `SceneCache` | pending |
 | 5 | `ThumbnailGenerator` | pending |
 | 6 | `SimilarityChecker` | pending |
