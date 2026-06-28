@@ -15,9 +15,42 @@ from ..core.discord_rpc import RPC_AVAILABLE, DiscordRPC
 from ..ui import banner, console, err, make_progress, make_table, ok, fail, dim
 
 CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
-VALID_CODECS = {"copy", "h264", "hevc", "h265"}
+VALID_CODECS = {
+    "copy",
+    "h264", "hevc", "h265",
+    "h264_main", "h264_high", "h264_high10", "h264_high422",
+    "h265_main", "h265_main10", "h265_main12", "h265_main422_10",
+    "av1_main",
+    "prores_422_lt", "prores_422", "prores_422_hq", "prores_4444", "prores_4444_xq",
+}
 VALID_AUDIO = {"copy", "aac", "aac_320", "pcm16", "pcm24", "flac", "alac", "opus", "mp3", "none"}
 VALID_CONTAINERS = {"mp4", "mkv", "mov"}
+VALID_HARDWARE = {"auto", "gpu", "cpu"}
+
+CODEC_ALIASES: dict[str, str] = {
+    "h264": "h264_main",
+    "hevc": "h265_main",
+    "h265": "h265_main",
+}
+
+CODEC_PROFILES: dict[str, dict[str, str | None]] = {
+    "h264_main":       {"cpu": "libx264",   "gpu": "h264_nvenc",      "args": "-profile:v main"},
+    "h264_high":       {"cpu": "libx264",   "gpu": "h264_nvenc",      "args": "-profile:v high"},
+    "h264_high10":     {"cpu": "libx264",   "gpu": None,              "args": "-profile:v high10"},
+    "h264_high422":    {"cpu": "libx264",   "gpu": None,              "args": "-profile:v high422"},
+    "h265_main":       {"cpu": "libx265",   "gpu": "hevc_nvenc",      "args": "-profile:v main"},
+    "h265_main10":     {"cpu": "libx265",   "gpu": "hevc_nvenc",      "args": "-profile:v main10"},
+    "h265_main12":     {"cpu": "libx265",   "gpu": None,              "args": "-profile:v main12"},
+    "h265_main422_10": {"cpu": "libx265",   "gpu": None,              "args": "-profile:v main422-10"},
+    "av1_main":        {"cpu": "libsvtav1", "gpu": "av1_nvenc",       "args": ""},
+    "prores_422_lt":   {"cpu": "prores_ks", "gpu": None,              "args": "-profile:v 0"},
+    "prores_422":      {"cpu": "prores_ks", "gpu": None,              "args": "-profile:v 1"},
+    "prores_422_hq":   {"cpu": "prores_ks", "gpu": None,              "args": "-profile:v 2"},
+    "prores_4444":     {"cpu": "prores_ks", "gpu": None,              "args": "-profile:v 3"},
+    "prores_4444_xq":  {"cpu": "prores_ks", "gpu": None,              "args": "-profile:v 4"},
+}
+
+PRORES_CODECS = {k for k in CODEC_PROFILES if k.startswith("prores")}
 
 AUDIO_FFMPEG: dict[str, list[str]] = {
     "copy":     ["-c:a", "copy"],
@@ -45,6 +78,22 @@ def _parse_select(select: str, max_index: int) -> list[int]:
     return sorted(i for i in indices if 0 <= i <= max_index)
 
 
+def _resolve_gpu(hardware: str, codec: str) -> bool:
+    if codec == "copy":
+        return False
+    if codec in PRORES_CODECS:
+        return False
+    if hardware == "cpu":
+        return False
+    if hardware == "gpu":
+        return True
+    try:
+        import torch
+        return torch.cuda.is_available()
+    except ImportError:
+        return False
+
+
 def export(
     video: Path = typer.Argument(..., help="Source video file", exists=True),
     scenes: Path = typer.Option(..., "--scenes", "-s", help="scenes.json from detect", exists=True),
@@ -54,6 +103,7 @@ def export(
     codec: str = typer.Option("copy", "--codec", help="copy · h264 · hevc"),
     audio: str = typer.Option("copy", "--audio", help="copy · aac · aac_320 · pcm16 · pcm24 · flac · alac · opus · mp3 · none"),
     container: str = typer.Option("mp4", "--container", help="mp4 · mkv · mov"),
+    hardware: str = typer.Option("auto", "--hardware", help="auto · gpu · cpu"),
     no_rpc: bool = typer.Option(False, "--no-rpc", help="Disable Discord RPC"),
 ) -> None:
     """Export selected scenes from a detect run."""
@@ -66,8 +116,15 @@ def export(
     if container not in VALID_CONTAINERS:
         fail(f"Unknown container '{container}'. Valid: {', '.join(sorted(VALID_CONTAINERS))}")
         raise typer.Exit(1)
-    if codec == "h265":
-        codec = "hevc"
+    if hardware not in VALID_HARDWARE:
+        fail(f"Unknown hardware '{hardware}'. Valid: {', '.join(sorted(VALID_HARDWARE))}")
+        raise typer.Exit(1)
+
+    codec = CODEC_ALIASES.get(codec, codec)
+    use_gpu = _resolve_gpu(hardware, codec)
+    if codec in PRORES_CODECS and container != "mov":
+        fail(f"Codec '{codec}' requires --container mov")
+        raise typer.Exit(1)
 
     banner("export")
 
@@ -98,9 +155,9 @@ def export(
 
     try:
         if merge:
-            _export_merged(selected, output, ff, codec, audio, container)
+            _export_merged(selected, output, ff, codec, audio, container, use_gpu)
         else:
-            _export_individual(selected, output, ff, codec, audio, container)
+            _export_individual(selected, output, ff, codec, audio, container, use_gpu)
         if rpc:
             rpc.update_complete()
     except Exception:
@@ -124,14 +181,19 @@ def _copy(src: str, dst: str, ff: str, audio: str) -> None:
     subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
 
 
-def _encode(src: str, dst: str, ff: str, codec: str, audio: str) -> None:
-    cmd = [ff, "-y", "-i", src, "-c:v", codec]
+def _encode(src: str, dst: str, ff: str, codec: str, audio: str, use_gpu: bool) -> None:
+    profile = CODEC_PROFILES[codec]
+    encoder = profile["gpu"] if use_gpu and profile["gpu"] else profile["cpu"]
+    cmd = [ff, "-y", "-i", src, "-c:v", str(encoder)]
+    args = str(profile["args"]).strip()
+    if args:
+        cmd += args.split()
     cmd += AUDIO_FFMPEG[audio]
     cmd.append(dst)
     subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
 
 
-def _export_individual(scenes: list[dict], output: Path, ff: str, codec: str, audio: str, container: str) -> None:
+def _export_individual(scenes: list[dict], output: Path, ff: str, codec: str, audio: str, container: str, use_gpu: bool) -> None:
     with make_progress(show_count=True) as progress:
         task = progress.add_task(f"Exporting {len(scenes)} clips", total=len(scenes))
         for s in scenes:
@@ -140,14 +202,14 @@ def _export_individual(scenes: list[dict], output: Path, ff: str, codec: str, au
             if codec == "copy":
                 _copy(s["path"], dst, ff, audio)
             else:
-                _encode(s["path"], dst, ff, codec, audio)
+                _encode(s["path"], dst, ff, codec, audio, use_gpu)
             progress.advance(task)
             progress.update(task, description=f"Exported scene_{idx:04d}")
 
     ok(f"{len(scenes)} clips → {output}")
 
 
-def _export_merged(scenes: list[dict], output: Path, ff: str, codec: str, audio: str, container: str) -> None:
+def _export_merged(scenes: list[dict], output: Path, ff: str, codec: str, audio: str, container: str, use_gpu: bool) -> None:
     with make_progress() as progress:
         task = progress.add_task(f"Merging {len(scenes)} clips", total=1)
 
@@ -166,7 +228,12 @@ def _export_merged(scenes: list[dict], output: Path, ff: str, codec: str, audio:
                     cmd += ["-c:v", "copy"]
                     cmd += AUDIO_FFMPEG[audio]
             else:
-                cmd += ["-c:v", codec]
+                profile = CODEC_PROFILES[codec]
+                encoder = profile["gpu"] if use_gpu and profile["gpu"] else profile["cpu"]
+                cmd += ["-c:v", str(encoder)]
+                args = str(profile["args"]).strip()
+                if args:
+                    cmd += args.split()
                 cmd += AUDIO_FFMPEG[audio]
             cmd.append(dst)
             subprocess.run(cmd, capture_output=True, creationflags=CREATE_NO_WINDOW, check=True)
