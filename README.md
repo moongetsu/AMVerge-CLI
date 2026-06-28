@@ -10,8 +10,8 @@
 
 # AMVerge CLI
 
-**Scene detection and clip management - as a CLI tool and Python library.**  
-Port of the AMVerge desktop app backend. Split videos into scenes, export clips, merge fragments, and build your own tools on top of it.
+**AMVerge Features as a CLI Tool and Python Library.**  
+Port of the AMVerge desktop app backend by [Crptk](https://github.com/crptk). Split videos into scenes, export clips, merge fragments, and build your own tools on top of it.
 
 ---
 
@@ -121,7 +121,7 @@ for scene in result.scenes:
 
 Built by [Moongetsu](https://github.com/Moongetsu) as a standalone port of the [AMVerge](https://github.com/crptk/AMVerge) backend.
 
-Original AMVerge by [Crptk](https://github.com/crptk) and contributors.
+AMVerge was created by [Crptk](https://github.com/crptk). All core scene detection and clip management logic originates from the original AMVerge project.
 
 ---
 
