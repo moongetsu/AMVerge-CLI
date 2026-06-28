@@ -112,9 +112,9 @@ Wraps `amverge doctor` logic. Already exists in commands/doctor.py.
 
 ---
 
-## 7. Thumbnails
+## 7. Thumbnails ✅
 
-### `ThumbnailGenerator` class
+~~`ThumbnailGenerator` class~~ Done. `core/thumbnail_generator.py`, exported from `amverge`.
 
 ```python
 from amverge import ThumbnailGenerator
@@ -171,7 +171,7 @@ config = TransNetConfig()
 | 2 | `SceneDetector` | ✅ done |
 | 3 | `SceneExporter` | ✅ done |
 | 4 | `SceneCache` | ✅ done |
-| 5 | `ThumbnailGenerator` | pending |
+| 5 | `ThumbnailGenerator` | ✅ done |
 | 6 | `SimilarityChecker` | pending |
 | 7 | `ImageCrop` rename | pending |
 | 8 | `check_environment()` | pending |
