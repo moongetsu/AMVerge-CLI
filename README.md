@@ -108,50 +108,27 @@ AMVerge-CLI/
 │   ├── wizard.py                interactive session (no-args mode)
 │   ├── ui.py                    shared Rich theme, console, banner, progress, table helpers
 │   │
-│   ├── commands/                one file per CLI subcommand
-│   │   ├── about.py             about
-│   │   ├── backend.py           backend (hidden - Rust sidecar replacement)
-│   │   ├── bench.py             bench (keyframe scan + TransNetV2 timing)
-│   │   ├── cache.py             cache (list/clear .npy scene caches)
-│   │   ├── changelog.py         changelog
-│   │   ├── credits.py           credits
-│   │   ├── detect.py            detect
-│   │   ├── doctor.py            doctor (full health check)
-│   │   ├── export.py            export (codec profiles + hardware selection)
-│   │   ├── gpu.py               gpu (CUDA, GPU name/VRAM)
-│   │   ├── info.py              info (stream metadata via PyAV)
-│   │   ├── keyframes.py         keyframes (dump keyframe timestamps)
-│   │   ├── merge.py             merge
-│   │   ├── probe.py             probe (codec/HEVC/keyframes/scene cache)
-│   │   ├── rpc_server.py        rpc-server (hidden - Discord RPC sidecar)
-│   │   ├── scenes.py            scenes (show scene list from .npy cache)
-│   │   ├── usage.py             usage (CLI reference page)
-│   │   └── version.py           version (CLI + Python + dep versions)
+│   ├── commands/
+│   │   ├── about/               about, credits, changelog, usage
+│   │   ├── detection/           detect, bench, cache, scenes, keyframes
+│   │   ├── export/              export, merge
+│   │   ├── info/                info, probe
+│   │   ├── sidecar/             backend, rpc_server (hidden)
+│   │   └── system/              doctor, gpu, version
 │   │
 │   └── core/                    pure logic, no CLI/Rich deps
-│       ├── binaries.py          get_binary(), get_ffmpeg(), get_ffprobe()
-│       ├── codec_utils.py       check_if_hevc(), CODEC_PROFILES, AUDIO_FFMPEG
-│       ├── diagnostics.py       get_gpu_info(), get_versions()
-│       ├── discord_rpc.py       DiscordRPC class (pypresence wrapper)
-│       ├── hevc.py              is_hevc() (V1 codec check)
-│       ├── image.py             crop_image() + CropData
-│       ├── ipc.py               emit_progress(), emit_event(), log()
-│       ├── keyframe_align.py    get_keyframe_timestamps_pyav(), classify_scenes_by_keyframe_alignment()
-│       ├── keyframes.py         generate_keyframes() (V1 packet demux)
-│       ├── nelux_runtime.py     _get_nelux_video_reader() (Windows DLL config)
-│       ├── probe_utils.py       probe_video_fps/duration/dimensions/total_frames
-│       ├── scene_detection.py   decode_video_frames_nelux(), decode_and_detect_scenes(), run_model_one_pass()
-│       ├── scene_utils.py       scenes_to_objects(), scenes_frames_to_seconds()
-│       ├── segmenter.py         run_ffmpeg_segment() (1500-cut Windows chunking)
-│       ├── similarity.py        find_similar_pairs() (cosine similarity)
-│       ├── smart_cut.py         cut_scene(), cut_all_scenes() (lossless copy / smartcut / reencode)
-│       ├── thumbnails.py        make_thumbnail(), generate_thumbnails() (ThreadPoolExecutor)
-│       ├── thumbnails_streaming.py  streaming thumbnail gen with IPC events
-│       ├── transnet_constants.py    FRAME_WIDTH/HEIGHT/CHANNELS, WINDOW_SIZE, STRIDE
-│       ├── video.py             get_video_duration(), get_video_info(), merge_short_scenes()
-│       └── detection/
-│           ├── keyframe.py      detect_cuts_by_keyframe() (V1)
-│           └── edge.py          detect_cuts_by_edge() (guarded cv2 import, V1)
+│       ├── codec/               codec profiles, HEVC detection (codec_utils)
+│       ├── cutting/             segmenter (V1), smart_cut (V2)
+│       ├── detection/           keyframe, edge (V1), scene_detection, nelux_runtime (V2)
+│       ├── discord/             Discord RPC integration
+│       ├── image/               image cropping
+│       ├── infra/               binaries, IPC, diagnostics
+│       ├── keyframes/           keyframe extraction + alignment
+│       ├── similarity/          cosine similarity pair detection
+│       ├── thumbnails/          thumbnail generation + streaming
+│       ├── transnet/            TransNetV2 constants
+│       ├── video/               probe_utils, scene_utils, video metadata
+│       └── wrappers/            public class wrappers (AmvergeVideo, SceneDetector, etc.)
 │
 ├── examples/                runnable Python scripts
 │   ├── custom-pipeline/     full end-to-end pipeline

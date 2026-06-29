@@ -17,35 +17,35 @@ from .__version__ import __version__
 from .pipeline import detect_scenes, DetectResult, Scene, DetectionMethod
 
 # -- Video object -------------------------------------------------------
-from .core.amverge_video import AmvergeVideo
+from .core.wrappers.amverge_video import AmvergeVideo
 
 # -- Scene detector -----------------------------------------------------
-from .core.scene_detector import SceneDetector
+from .core.wrappers.scene_detector import SceneDetector
 
 # -- Scene exporter -----------------------------------------------------
-from .core.scene_exporter import SceneExporter
+from .core.wrappers.scene_exporter import SceneExporter
 
 # -- Scene cache --------------------------------------------------------
-from .core.scene_cache import SceneCache
+from .core.wrappers.scene_cache import SceneCache
 
 # -- Thumbnail generator ------------------------------------------------
-from .core.thumbnail_generator import ThumbnailGenerator
+from .core.wrappers.thumbnail_generator import ThumbnailGenerator
 
 # -- Similarity checker -------------------------------------------------
-from .core.similarity_checker import SimilarityChecker
+from .core.wrappers.similarity_checker import SimilarityChecker
 
 # -- Image crop ----------------------------------------------------------
-from .core.image_crop import ImageCrop
+from .core.wrappers.image_crop import ImageCrop
 
 # -- TransNetV2 config ---------------------------------------------------
-from .core.transnet_config import TransNetConfig
+from .core.wrappers.transnet_config import TransNetConfig
 
 # -- Binaries -----------------------------------------------------------
-from .core.binaries import get_binary, get_ffmpeg, get_ffprobe
+from .core.infra.binaries import get_binary, get_ffmpeg, get_ffprobe
 
 # -- Video metadata -----------------------------------------------------
 from .core.video import get_video_duration, get_video_info, merge_short_scenes
-from .core.probe_utils import (
+from .core.video.probe_utils import (
     probe_video_fps,
     probe_video_dimensions,
     probe_video_duration,
@@ -54,7 +54,7 @@ from .core.probe_utils import (
 
 # -- Keyframe extraction ------------------------------------------------
 from .core.keyframes import generate_keyframes
-from .core.keyframe_align import (
+from .core.keyframes.keyframe_align import (
     get_keyframe_timestamps_pyav,
     classify_scenes_by_keyframe_alignment,
 )
@@ -64,7 +64,7 @@ from .core.detection.keyframe import detect_cuts_by_keyframe
 from .core.detection.edge import detect_cuts_by_edge
 
 # -- Scene detection (V2 TransNetV2) ------------------------------------
-from .core.scene_detection import (
+from .core.detection.scene_detection import (
     TRANSNET_AVAILABLE,
     decode_and_detect_scenes,
     decode_video_frames_nelux,
@@ -72,11 +72,11 @@ from .core.scene_detection import (
 )
 
 # -- Scene cutting ------------------------------------------------------
-from .core.smart_cut import cut_scene, cut_all_scenes
-from .core.segmenter import run_ffmpeg_segment, collect_scenes
+from .core.cutting.smart_cut import cut_scene, cut_all_scenes
+from .core.cutting.segmenter import run_ffmpeg_segment, collect_scenes
 
 # -- Scene utilities ----------------------------------------------------
-from .core.scene_utils import (
+from .core.video.scene_utils import (
     scenes_frames_to_seconds,
     convert_scenes_to_timestamps,
     scenes_to_objects,
@@ -89,22 +89,22 @@ from .core.thumbnails import make_thumbnail, generate_thumbnails
 from .core.similarity import check_pair_similar, find_similar_pairs
 
 # -- Codec detection ----------------------------------------------------
-from .core.codec_utils import (
+from .core.codec.codec_utils import (
     check_if_hevc,
+    is_hevc,
     VALID_CODECS, VALID_AUDIO, VALID_CONTAINERS, VALID_HARDWARE,
     CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, AUDIO_FFMPEG,
     resolve_gpu,
 )
-from .core.hevc import is_hevc
 
 # -- Image --------------------------------------------------------------
 from .core.image import CropData, crop_image
 
 # -- Diagnostics -------------------------------------------------------
-from .core.diagnostics import get_gpu_info, get_versions, check_environment, EnvironmentCheck, CheckResult
+from .core.infra.diagnostics import get_gpu_info, get_versions, check_environment, EnvironmentCheck, CheckResult
 
 # -- IPC ----------------------------------------------------------------
-from .core.ipc import (
+from .core.infra.ipc import (
     emit_progress,
     emit_event,
     log,
@@ -113,10 +113,10 @@ from .core.ipc import (
 )
 
 # -- Discord RPC --------------------------------------------------------
-from .core.discord_rpc import RPC_AVAILABLE, DiscordRPC
+from .core.discord.discord_rpc import RPC_AVAILABLE, DiscordRPC
 
 # -- TransNetV2 constants -----------------------------------------------
-from .core.transnet_constants import (
+from .core.transnet.transnet_constants import (
     FRAME_WIDTH,
     FRAME_HEIGHT,
     FRAME_CHANNELS,

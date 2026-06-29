@@ -22,7 +22,7 @@ from typing import Callable, Literal
 
 from .core.detection.keyframe import detect_cuts_by_keyframe
 from .core.detection.edge import detect_cuts_by_edge
-from .core.segmenter import collect_scenes, run_ffmpeg_segment
+from .core.cutting.segmenter import collect_scenes, run_ffmpeg_segment
 from .core.thumbnails import generate_thumbnails
 from .core.similarity import find_similar_pairs
 from .core.video import get_video_duration
@@ -246,21 +246,21 @@ def detect_scenes(
                 pass
 
     if method == "transnetv2":
-        from .core.scene_detection import TRANSNET_AVAILABLE
+        from .core.detection.scene_detection import TRANSNET_AVAILABLE
         if not TRANSNET_AVAILABLE:
             raise ImportError(
                 "transnetv2_pytorch not installed. Run: pip install amverge[ml]"
             )
 
         import torch
-        from .core.scene_detection import decode_and_detect_scenes
-        from .core.keyframe_align import get_keyframe_timestamps_pyav, classify_scenes_by_keyframe_alignment
-        from .core.codec_utils import check_if_hevc
-        from .core.scene_utils import scenes_to_objects
-        from .core.smart_cut import cut_all_scenes
+        from .core.detection.scene_detection import decode_and_detect_scenes
+        from .core.keyframes.keyframe_align import get_keyframe_timestamps_pyav, classify_scenes_by_keyframe_alignment
+        from .core.codec.codec_utils import check_if_hevc
+        from .core.video.scene_utils import scenes_to_objects
+        from .core.cutting.smart_cut import cut_all_scenes
 
-        import amverge.core.scene_detection as scene_det
-        import amverge.core.smart_cut as smart_cut
+        import amverge.core.detection.scene_detection as scene_det
+        import amverge.core.cutting.smart_cut as smart_cut
         _orig_emit_scene = scene_det.emit_progress
         _orig_emit_cut = smart_cut.emit_progress
         _stage = "detect"

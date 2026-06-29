@@ -1,23 +1,23 @@
 ﻿import typer
 
-from .commands.detect import detect
-from .commands.export import export
-from .commands.merge import merge
-from .commands.info import info
-from .commands.probe import probe
-from .commands.gpu import gpu
-from .commands.doctor import doctor
-from .commands.version import version
-from .commands.bench import bench
-from .commands.cache import cache
-from .commands.keyframes import keyframes
-from .commands.scenes import scenes
-from .commands.about import about
-from .commands.credits import credits
-from .commands.changelog import changelog
-from .commands.usage import usage
-from .commands.backend import backend
-from .commands.rpc_server import rpc_server
+from .commands.detection.detect import detect
+from .commands.export.export import export
+from .commands.export.merge import merge
+from .commands.info.info import info
+from .commands.info.probe import probe
+from .commands.system.gpu import gpu
+from .commands.system.doctor import doctor
+from .commands.system.version import version
+from .commands.detection.bench import bench
+from .commands.detection.cache import cache
+from .commands.detection.keyframes import keyframes
+from .commands.detection.scenes import scenes
+from .commands.about.about import about
+from .commands.about.credits import credits
+from .commands.about.changelog import changelog
+from .commands.about.usage import usage
+from .commands.sidecar.backend import backend
+from .commands.sidecar.rpc_server import rpc_server
 
 app = typer.Typer(
     name="amverge",

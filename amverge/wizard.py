@@ -227,7 +227,7 @@ def _wizard_detect() -> None:
 
 
 def _wizard_export() -> None:
-    from .core.binaries import get_ffmpeg
+    from .core.infra.binaries import get_ffmpeg
 
     _header()
     _section("export", "01/04")
@@ -302,7 +302,7 @@ def _wizard_export() -> None:
     CREATE_NO_WINDOW = 0x08000000 if sys.platform == "win32" else 0
     import subprocess
 
-    from .core.codec_utils import AUDIO_FFMPEG, CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, resolve_gpu
+    from .core.codec.codec_utils import AUDIO_FFMPEG, CODEC_ALIASES, CODEC_PROFILES, PRORES_CODECS, resolve_gpu
     codec = CODEC_ALIASES.get(codec, codec)
     use_gpu = resolve_gpu(hardware, codec)
 
@@ -365,7 +365,7 @@ def _wizard_export() -> None:
 
 
 def _wizard_merge() -> None:
-    from .core.binaries import get_ffmpeg
+    from .core.infra.binaries import get_ffmpeg
     import subprocess
 
     _header()
@@ -477,25 +477,25 @@ def _wizard_info() -> None:
 
 def _wizard_help() -> None:
     os.system("cls" if os.name == "nt" else "clear")
-    from .commands.usage import usage
+    from .commands.about.usage import usage
     usage()
 
 
 def _wizard_about() -> None:
     os.system("cls" if os.name == "nt" else "clear")
-    from .commands.about import about
+    from .commands.about.about import about
     about()
 
 
 def _wizard_credits() -> None:
     os.system("cls" if os.name == "nt" else "clear")
-    from .commands.credits import credits
+    from .commands.about.credits import credits
     credits()
 
 
 def _wizard_changelog() -> None:
     os.system("cls" if os.name == "nt" else "clear")
-    from .commands.changelog import changelog
+    from .commands.about.changelog import changelog
     changelog()
 
 
