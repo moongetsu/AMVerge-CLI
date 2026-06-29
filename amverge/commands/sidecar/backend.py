@@ -32,7 +32,11 @@ def backend(
     out_dir = Path(output_dir)
 
     import numpy as np
-    import torch
+    try:    
+        import torch
+    except ImportError:
+        print(f"Install with: pip install amverge[ml]")
+        raise SystemExit(1)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
