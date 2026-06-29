@@ -65,5 +65,5 @@ assets/                 GIF and image assets
 
 ## Links
 
-- Main repo: [github.com/crptk/AMVerge](https://github.com/crptk/AMVerge)
+- Main repo: [github.com/AMVerge-team/AMVerge](https://github.com/AMVerge-team/AMVerge)
 - Discord: [discord.gg/bmXjTgsAaN](https://discord.gg/bmXjTgsAaN)
