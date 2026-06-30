@@ -138,6 +138,9 @@ def interpolate_video(
     model_key: str = "rife4.25",
     factor: int = 2,
     preset: str = "high",
+    target_size_mb: float = 0,
+    fit_w: int = 0,
+    fit_h: int = 0,
     progress_cb: Optional[Callable[[int, str], None]] = None,
 ) -> None:
     entry = get_model(model_key)
@@ -164,6 +167,10 @@ def interpolate_video(
 
     out_w = w
     out_h = h
+    if fit_w > 0 and fit_h > 0 and (out_w > fit_w or out_h > fit_h):
+        ratio = min(fit_w / out_w, fit_h / out_h)
+        out_w = max(2, int(out_w * ratio) // 2 * 2)
+        out_h = max(2, int(out_h * ratio) // 2 * 2)
     output_fps = fps_val * factor
 
     ffmpeg_cmd = _build_pipe(out_w, out_h, output_fps, q["crf"], q["x264"], q.get("tune"), output_path)
@@ -258,6 +265,16 @@ def interpolate_video(
 
     _mux_audio(str(output_path), str(input_path))
 
+    if target_size_mb > 0:
+        if progress_cb:
+            progress_cb(95, f"Re-encoding to {target_size_mb:.0f} MB...")
+        if not _reencode_to_size(str(output_path), str(input_path), target_size_mb,
+                                 x264_preset=q["x264"], tune=q.get("tune")):
+            if progress_cb:
+                progress_cb(98, "Two-pass failed, falling back to high-quality re-encode")
+            _reencode_high_quality(str(output_path), x264_preset=q["x264"],
+                                   crf=q["crf"], tune=q.get("tune"))
+
     if progress_cb:
         progress_cb(100, "Complete")
 
@@ -273,3 +290,157 @@ def _pad_to_tensor_body(tensor):
 
 def _unpad_tensor_body(tensor, orig_h, orig_w):
     return tensor[:, :, :orig_h, :orig_w]
+
+
+def _probe_duration(video_path):
+    from ..infra.binaries import get_ffprobe as _get_ffprobe
+    ffprobe = _get_ffprobe()
+    try:
+        r = subprocess.run(
+            [ffprobe, "-v", "error", "-show_entries", "format=duration",
+             "-of", "default=noprint_wrappers=1:nokey=1", str(video_path)],
+            capture_output=True, text=True, timeout=15, creationflags=CREATE_NO_WINDOW,
+        )
+        return float(r.stdout.strip()) if r.stdout.strip() else None
+    except Exception:
+        return None
+
+
+def _reencode_to_size(video_path, audio_source_path, target_mb, x264_preset="slow", tune="animation"):
+    ffmpeg = get_ffmpeg()
+    from ..infra.binaries import get_ffprobe as _get_ffprobe
+
+    duration = _probe_duration(video_path) or _probe_duration(audio_source_path)
+    if not duration or duration <= 0:
+        return False
+
+    has_audio = False
+    audio_bitrate_kbps = 192
+    try:
+        ffprobe = _get_ffprobe()
+        r = subprocess.run(
+            [ffprobe, "-v", "error", "-select_streams", "a", "-show_entries",
+             "stream=codec_type,bit_rate", "-of", "csv=p=0", str(audio_source_path)],
+            capture_output=True, text=True, timeout=10, creationflags=CREATE_NO_WINDOW,
+        )
+        for line in r.stdout.strip().splitlines():
+            parts = line.split(",")
+            if len(parts) >= 1 and parts[0] == "audio":
+                has_audio = True
+                if len(parts) >= 2 and parts[1].isdigit():
+                    audio_bitrate_kbps = int(int(parts[1]) / 1000)
+                break
+    except Exception:
+        pass
+
+    SAFETY = 0.95
+    total_bits = target_mb * 8 * 1000 * 1000 * SAFETY
+    audio_bits = (audio_bitrate_kbps * 1000 * duration) if has_audio else 0
+    video_bits = total_bits - audio_bits
+    if video_bits <= 0:
+        return False
+    video_bitrate_kbps = int(video_bits / 1000 / duration)
+    if video_bitrate_kbps < 100:
+        return False
+    video_bitrate_kbps = min(video_bitrate_kbps, 100000)
+
+    tmp = str(video_path) + ".tmp.mp4"
+    null_path = "NUL" if os.name == "nt" else "/dev/null"
+    passlog = str(video_path) + ".ffpass"
+    maxrate = int(min(video_bitrate_kbps * 1.45, 120000))
+    bufsize = int(min(video_bitrate_kbps * 2, 200000))
+
+    def _cleanup_passlog():
+        for p in (passlog, passlog + "-0.log", passlog + "-0.log.mbtree"):
+            if os.path.exists(p):
+                try:
+                    os.unlink(p)
+                except Exception:
+                    pass
+
+    cmd1 = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+        "-i", str(video_path),
+        "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
+        "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
+        "-preset", x264_preset, "-tune", tune, "-pix_fmt", "yuv420p",
+        "-an", "-pass", "1", "-passlogfile", passlog,
+        "-f", "null", null_path,
+    ]
+    try:
+        r1 = subprocess.run(cmd1, capture_output=True, text=True, timeout=600, creationflags=CREATE_NO_WINDOW)
+        if r1.returncode != 0:
+            _cleanup_passlog()
+            return False
+    except Exception:
+        _cleanup_passlog()
+        return False
+
+    cmd2 = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+        "-i", str(video_path),
+    ]
+    if has_audio:
+        cmd2 += ["-i", str(audio_source_path), "-map", "0:v:0", "-map", "1:a:0?"]
+    cmd2 += [
+        "-c:v", "libx264", "-b:v", f"{video_bitrate_kbps}k",
+        "-maxrate", f"{maxrate}k", "-bufsize", f"{bufsize}k",
+        "-preset", x264_preset, "-tune", tune, "-pix_fmt", "yuv420p",
+        "-profile:v", "high",
+        "-pass", "2", "-passlogfile", passlog,
+    ]
+    cmd2 += (["-c:a", "aac", "-b:a", f"{audio_bitrate_kbps}k"] if has_audio else ["-an"])
+    cmd2 += ["-movflags", "+faststart", tmp]
+    try:
+        r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=600, creationflags=CREATE_NO_WINDOW)
+        if r2.returncode != 0:
+            if os.path.exists(tmp):
+                os.unlink(tmp)
+            _cleanup_passlog()
+            return False
+        if os.path.exists(tmp) and os.path.getsize(tmp) > 1024:
+            os.replace(tmp, str(video_path))
+            _cleanup_passlog()
+            return True
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        _cleanup_passlog()
+        return False
+    except Exception:
+        if os.path.exists(tmp):
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
+        _cleanup_passlog()
+        return False
+
+
+def _reencode_high_quality(video_path, x264_preset="slow", crf=17, tune="animation"):
+    ffmpeg = get_ffmpeg()
+    tmp = str(video_path) + ".tmp.mp4"
+    cmd = [
+        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+        "-i", str(video_path),
+        "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
+        "-profile:v", "high",
+        "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", tmp,
+    ]
+    if tune:
+        cmd += ["-tune", tune]
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600, creationflags=CREATE_NO_WINDOW)
+        if r.returncode == 0 and os.path.exists(tmp) and os.path.getsize(tmp) > 1024:
+            os.replace(tmp, str(video_path))
+            return True
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+        return False
+    except Exception:
+        if os.path.exists(tmp):
+            try:
+                os.unlink(tmp)
+            except Exception:
+                pass
+        return False

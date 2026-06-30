@@ -16,8 +16,11 @@ def interpolate(
     input: Path = typer.Argument(None, help="Input video file"),
     output: Path = typer.Option(Path("interpolated.mp4"), "--output", "-o", help="Output video file"),
     model: str = typer.Option("rife4.25", "--model", "-m", help="Interpolation model key from registry"),
-    factor: int = typer.Option(2, "--factor", "-f", help="Frame rate multiplier (2-16)"),
+    factor: int = typer.Option(2, "--factor", "-f", help="Frame rate multiplier (2-64)"),
     preset: str = typer.Option("high", "--preset", "-p", help="Quality: archival, high, balanced, fast, draft"),
+    target_size_mb: float = typer.Option(0, "--target-size-mb", help="Target output file size in MB (two-pass encode)"),
+    fit_w: int = typer.Option(0, "--fit-w", help="Max output width (0 = no limit)"),
+    fit_h: int = typer.Option(0, "--fit-h", help="Max output height (0 = no limit)"),
     list_models: bool = typer.Option(False, "--list-models", help="List all available models"),
     credits: bool = typer.Option(False, "--credits", help="Show credits for interpolation technologies"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Auto-confirm download prompts"),
@@ -77,8 +80,8 @@ def interpolate(
         fail(f"Unknown model '{model}'. Use --list-models to see available models.")
         raise typer.Exit(1)
 
-    if factor < 2 or factor > 16:
-        fail("Factor must be between 2 and 16")
+    if factor < 2 or factor > 64:
+        fail("Factor must be between 2 and 64")
         raise typer.Exit(1)
 
     if preset not in QUALITY_PRESETS:
@@ -106,6 +109,10 @@ def interpolate(
                   f"Preset: [accent]{preset}[/accent]")
     console.print(f"  Input:  [dim]{input}[/dim]")
     console.print(f"  Output: [dim]{output}[/dim]")
+    if target_size_mb > 0:
+        console.print(f"  Target: [accent]{target_size_mb:.0f} MB[/accent]")
+    if fit_w > 0 or fit_h > 0:
+        console.print(f"  Fit:    [accent]{fit_w}x{fit_h}[/accent]")
 
     if not _interp_dl_check(model) and not yes:
         console.print(f"\n  [warn]Model '{entry['name']}' not downloaded.[/warn]")
@@ -137,6 +144,9 @@ def interpolate(
                 model_key=model,
                 factor=factor,
                 preset=preset,
+                target_size_mb=target_size_mb,
+                fit_w=fit_w,
+                fit_h=fit_h,
                 progress_cb=_progress_cb,
             )
         except Exception as e:

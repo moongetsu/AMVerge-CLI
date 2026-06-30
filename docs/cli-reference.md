@@ -317,11 +317,15 @@ amverge interpolate episode.mp4 -f 2 -y     # auto-download weights
 | `INPUT` (arg) | required | Input video file |
 | `--output / -o` | `interpolated.mp4` | Output video file |
 | `--model / -m` | `rife4.25` | Model key: rife4.25, rife4.25-heavy |
-| `--factor / -f` | `2` | Frame rate multiplier (2-16) |
+| `--factor / -f` | `2` | Frame rate multiplier (2-64) |
 | `--preset / -p` | `high` | Quality: archival, high, balanced, fast, draft |
+| `--target-size-mb` | `0` | Target file size in MB (two-pass x264) |
+| `--fit-w` | `0` | Max output width (0 = no limit) |
+| `--fit-h` | `0` | Max output height (0 = no limit) |
 | `--list-models` | false | List available models |
 | `--credits` | false | Show credits |
 | `--yes / -y` | false | Auto-confirm downloads |
+| `--download` | false | Download weights without running |
 
 Requires `pip install amverge[ml]`. CUDA auto-detected, CPU fallback.
 Weights auto-downloaded on first run to `%APPDATA%/com.amverge.cli/models/interpolation/`.
