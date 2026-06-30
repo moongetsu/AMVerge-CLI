@@ -126,11 +126,9 @@ AMVerge-CLI/
 │       │   └── transnet_constants.py    FRAME_WIDTH/HEIGHT/CHANNELS/BYTES, WINDOW_SIZE, STRIDE
 │       ├── upscaling/
 │       │   ├── registry.json       declarative model registry - add models here, CLI auto-discovers
-│       │   ├── registry.py          loads registry.json, builds download URLs, query functions
-│       │   ├── __init__.py          exports: UPSCALE_REGISTRY, QUALITY_PRESETS, upscale_video, ...
-│       │   ├── upscale.py           upscale_video() - ML frame loop via spandrel, FFmpeg pipe, audio mux
-│       │   ├── anime4k.py           upscale_video_anime4k() - FFmpeg lanczos+unsharp+smartblur filters
-│       │   ├── artcnn.py            upscale_video_artcnn() - ONNX Runtime inference (ArtCNN by Artoriuz)
+│       │   ├── registry.py          loads registry.json, builds URLs, query functions
+│       │   ├── engine.py            upscale_model() - dispatches ml/shader/onnx from registry
+│       │   ├── __init__.py          exports: UPSCALE_REGISTRY, upscale_model, ...
 │       │   └── weight_loader.py     download_weights(), verify_weight_hash(), load_weights_if_available()
 │       ├── video/
 │       │   ├── probe_utils.py   probe_video_fps/duration/dimensions/total_frames via ffprobe
@@ -239,8 +237,8 @@ for scene in result.scenes:
 | `core/keyframes/keyframe_align.py` | `get_keyframe_timestamps_pyav` uses PyAV demux with `type(stream.discard).nonkey` enum (PyAV 17.x; was `"NONKEY"` string in older PyAV). `classify_scenes_by_keyframe_alignment` partitions scenes for Phase 1 vs Phase 2 cutting. |
 | `core/thumbnails/thumbnails_streaming.py` | V1 backend mode only. Emits events as each thumbnail completes. Not used in V2 backend. |
 | `core/discord/discord_rpc.py` | Uses same CLIENT_ID as AMVerge app (`1497922104065134823`). Silently no-ops if pypresence not installed. `--no-rpc` flag on detect/export/merge to disable. Methods: idle/detecting/selecting/navigating/exporting/merging/complete/error. |
-| `commands/upscaling/upscale.py` | `amverge upscale` command. Three methods: `--method ml` (ShuffleCUGAN via torch/spandrel, `[upscale]` extra), `--method anime4k` (GLSL shaders via FFmpeg libplacebo, no ML deps), `--method artcnn` (ONNX runtime, `[upscale]` extra). `--credits` flag shows attributions. Weights cached at `%APPDATA%/amverge/weights/`. Models: adore, shufflecugan, fallin_soft, fallin_strong. Scale: 2x/4x. |
-| `commands/upscaling/models.py` | `amverge models` command. Lists all downloaded model weights, shaders, ONNX files with sizes and hashes. `--download <key>` fetches a model. `--delete <key>` removes a model from disk. `--storage` shows cache directories. |
+| `core/upscaling/engine.py` | `upscale_model(key, ...)` - unified dispatch. Reads model from registry, routes to `_upscale_ml()` (spandrel), `_upscale_shader()` (FFmpeg filters), or `_upscale_onnx()` (ONNX Runtime). All three pipeline types in one file. |
+| `core/upscaling/registry.json` | Declarative model registry. To add a model, add one JSON entry with method, name, scales, credit, description, file/hash. CLI auto-discovers everything. See `docs/registry.md`. |
 | `core/upscaling/upscale.py` | `upscale_video()` main pipeline: OpenCV frame read → torch tensor → model inference → rawvideo FFmpeg pipe → audio mux. Model loading: built-in ShuffleCUGAN first, spandrel fallback. Quality presets: CRF + x264 preset + tune=animation. |
 | `core/upscaling/weight_loader.py` | Downloads model weights from AniSmooth-Models GitHub releases. Resume support (HTTP Range), SHA-256 integrity verification, 3 retries. Same MODEL_FILES/MODEL_HASHES as AniSmooth desktop app. |
 | `core/upscaling/anime4k.py` | `upscale_video_anime4k()` - downloads Anime4K v4.0.1 GLSL shaders, applies via FFmpeg `libplacebo` filter. No ML deps, GPU shader-accelerated. Fallback to lanczos+unsharp if libplacebo unavailable. Three modes: light/medium/strong. |
