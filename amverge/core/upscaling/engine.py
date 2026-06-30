@@ -7,7 +7,7 @@ from typing import Callable, Optional
 
 from .anime4k import upscale_video_anime4k
 from .artcnn import upscale_video_artcnn
-from .ffmpeg_helpers import CREATE_NO_WINDOW, build_ffmpeg_pipe, mux_audio
+from .ffmpeg_helpers import CREATE_NO_WINDOW, build_ffmpeg_pipe, get_color_args, mux_audio
 from .registry import QUALITY_PRESETS, get_model
 
 UPSCALE_AVAILABLE = False
@@ -94,7 +94,8 @@ def _upscale_ml(input_path, output_path, model_key, entry, scale, preset, fit_w,
     if fit_w > 0 and fit_h > 0 and (out_w > fit_w or out_h > fit_h):
         extra_vf = f"scale={fit_w}:{fit_h}:force_original_aspect_ratio=decrease:flags=lanczos"
 
-    ffmpeg_cmd = build_ffmpeg_pipe(out_w, out_h, fps_val, q["crf"], q["x264"], q.get("tune"), output_path, extra_vf)
+    ffmpeg_cmd = build_ffmpeg_pipe(out_w, out_h, fps_val, q["crf"], q["x264"], q.get("tune"), output_path, extra_vf,
+                                   color_args=get_color_args(input_path))
 
     ffmpeg_proc = subprocess.Popen(ffmpeg_cmd, stdin=subprocess.PIPE, stderr=subprocess.PIPE,
                                    creationflags=CREATE_NO_WINDOW)

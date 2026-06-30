@@ -38,7 +38,39 @@ def get_video_dims_ffprobe(input_path):
         raise RuntimeError("FFprobe not found. Install FFmpeg: https://ffmpeg.org/download.html")
 
 
-def build_ffmpeg_pipe(out_w, out_h, fps_val, crf, x264_preset, tune, output_path, extra_vf=None):
+def get_color_args(input_path):
+    ffprobe = get_ffprobe()
+    try:
+        out = subprocess.check_output(
+            [ffprobe, "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=color_primaries,color_transfer,color_space,color_range",
+             "-of", "default=nw=1", str(input_path)],
+            text=True, stderr=subprocess.DEVNULL, creationflags=CREATE_NO_WINDOW,
+        )
+    except Exception:
+        return []
+    vals = {}
+    for line in out.splitlines():
+        if "=" in line:
+            k, v = line.split("=", 1)
+            vals[k] = v.strip()
+
+    def ok(x):
+        return x and x.lower() not in ("unknown", "n/a", "reserved", "")
+
+    args = []
+    if ok(vals.get("color_primaries")):
+        args += ["-color_primaries", vals["color_primaries"]]
+    if ok(vals.get("color_transfer")):
+        args += ["-color_trc", vals["color_transfer"]]
+    if ok(vals.get("color_space")):
+        args += ["-colorspace", vals["color_space"]]
+    if ok(vals.get("color_range")):
+        args += ["-color_range", vals["color_range"]]
+    return args
+
+
+def build_ffmpeg_pipe(out_w, out_h, fps_val, crf, x264_preset, tune, output_path, extra_vf=None, color_args=None):
     enc_threads = encode_thread_count(out_w, out_h)
     ffmpeg = get_ffmpeg()
     cmd = [
@@ -47,7 +79,7 @@ def build_ffmpeg_pipe(out_w, out_h, fps_val, crf, x264_preset, tune, output_path
         "-s", f"{out_w}x{out_h}", "-pix_fmt", "bgr24",
         "-r", str(fps_val), "-i", "-",
         "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
-        "-profile:v", "high", "-level:v", "5.1",
+        "-profile:v", "high",
     ]
     if tune:
         cmd += ["-tune", tune]
@@ -58,8 +90,10 @@ def build_ffmpeg_pipe(out_w, out_h, fps_val, crf, x264_preset, tune, output_path
         "-x264-params", f"threads={enc_threads}:lookahead-threads=1:rc-lookahead=20",
         "-threads", str(enc_threads),
         "-movflags", "+faststart",
-        str(output_path),
     ]
+    if color_args:
+        cmd += color_args
+    cmd += [str(output_path)]
     return cmd
 
 

@@ -11,6 +11,7 @@ from .ffmpeg_helpers import (
     CREATE_NO_WINDOW,
     encode_thread_count,
     ensure_ffmpeg,
+    get_color_args,
     get_video_dims_ffprobe,
     mux_audio,
 )
@@ -26,7 +27,7 @@ ANIME4K_MODE_PRESETS = {
         "upscale": "Anime4K_Upscale_CNN_x2_M.glsl",
     },
     "strong": {
-        "restore": ["Anime4K_Restore_CNN_VL.glsl"],
+        "restore": ["Anime4K_Clamp_Highlights.glsl", "Anime4K_Restore_CNN_VL.glsl"],
         "upscale": "Anime4K_Upscale_CNN_x2_VL.glsl",
     },
 }
@@ -145,14 +146,14 @@ def _fit_dims(w, h, scale, fit_w, fit_h):
 
 
 def _build_libplacebo_cmd(input_path, output_path, out_w, out_h, shader_name,
-                          crf, x264_preset, tune):
+                          crf, x264_preset, tune, color_args=None):
     enc_threads = encode_thread_count(out_w, out_h)
     cmd = [
         get_ffmpeg(), "-y", "-hide_banner", "-loglevel", "error",
         "-i", str(input_path),
         "-vf", f"libplacebo=w={out_w}:h={out_h}:custom_shader_path={shader_name}",
         "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
-        "-profile:v", "high", "-level:v", "5.1",
+        "-profile:v", "high",
         "-pix_fmt", "yuv420p",
         "-x264-params", f"threads={enc_threads}:lookahead-threads=1:rc-lookahead=20",
         "-threads", str(enc_threads),
@@ -160,12 +161,14 @@ def _build_libplacebo_cmd(input_path, output_path, out_w, out_h, shader_name,
     ]
     if tune:
         cmd += ["-tune", tune]
+    if color_args:
+        cmd += color_args
     cmd += [str(output_path)]
     return cmd
 
 
 def _build_fallback_cmd(input_path, output_path, out_w, out_h, mode,
-                        crf, x264_preset, tune):
+                        crf, x264_preset, tune, color_args=None):
     enc_threads = encode_thread_count(out_w, out_h)
 
     if mode == "light":
@@ -182,7 +185,7 @@ def _build_fallback_cmd(input_path, output_path, out_w, out_h, mode,
         "-i", str(input_path),
         "-vf", vf,
         "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
-        "-profile:v", "high", "-level:v", "5.1",
+        "-profile:v", "high",
         "-pix_fmt", "yuv420p",
         "-x264-params", f"threads={enc_threads}:lookahead-threads=1:rc-lookahead=20",
         "-threads", str(enc_threads),
@@ -190,6 +193,8 @@ def _build_fallback_cmd(input_path, output_path, out_w, out_h, mode,
     ]
     if tune:
         cmd += ["-tune", tune]
+    if color_args:
+        cmd += color_args
     cmd += [str(output_path)]
     return cmd
 
@@ -218,6 +223,7 @@ def upscale_video_anime4k(input_path, output_path, entry, scale, preset,
     w, h = get_video_dims_ffprobe(input_path)
     out_w, out_h = _fit_dims(w, h, scale, fit_w, fit_h)
     tune = q.get("tune", "animation")
+    color_args = get_color_args(input_path)
 
     used_shaders = False
     if libplacebo_available():
@@ -230,7 +236,8 @@ def upscale_video_anime4k(input_path, output_path, entry, scale, preset,
         try:
             combined = _write_combined_shader(mode, scale, dest_dir)
             cmd = _build_libplacebo_cmd(input_path, output_path, out_w, out_h,
-                                        os.path.basename(combined), q["crf"], q["x264"], tune)
+                                        os.path.basename(combined), q["crf"], q["x264"], tune,
+                                        color_args=color_args)
             if progress_cb:
                 progress_cb(30, f"Anime4K shaders ({mode}, {scale}x) via libplacebo...")
             ok, err_text = _run(cmd, timeout=7200, cwd=dest_dir)
@@ -248,7 +255,7 @@ def upscale_video_anime4k(input_path, output_path, entry, scale, preset,
 
     if not used_shaders:
         cmd = _build_fallback_cmd(input_path, output_path, out_w, out_h,
-                                  mode, q["crf"], q["x264"], tune)
+                                  mode, q["crf"], q["x264"], tune, color_args=color_args)
         if progress_cb:
             progress_cb(40, f"Anime4K fallback ({mode}, {scale}x, lanczos)...")
         ok, err_text = _run(cmd, timeout=7200)
