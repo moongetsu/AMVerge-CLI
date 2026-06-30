@@ -141,6 +141,49 @@ if secs_path.exists():
     print("Cache cleared")
 ```
 
+### `amverge models`
+
+```python
+from amverge import MODEL_FILES, UPSCALE_MODEL_KEYS, is_weight_downloaded
+
+print("Available ML models:", UPSCALE_MODEL_KEYS)
+for key in UPSCALE_MODEL_KEYS:
+    print(f"  {key}: {'downloaded' if is_weight_downloaded(key) else 'not downloaded'}")
+```
+
+---
+
+### `amverge upscale`
+
+```python
+from amverge import upscale_video, QUALITY_PRESETS
+
+# ML method (needs torch + opencv)
+upscale_video(
+    "episode.mp4", "upscaled.mp4",
+    model_name="adore", scale=2, preset="high",
+    progress_cb=lambda pct, msg: print(f"{pct}% {msg}"),
+)
+
+# Anime4K shader method (FFmpeg only, fast)
+from amverge import upscale_video_anime4k
+
+upscale_video_anime4k(
+    "episode.mp4", "upscaled.mp4",
+    scale=2, mode="medium", preset="high",
+)
+
+# ArtCNN ONNX method (lightweight, fast)
+from amverge import upscale_video_artcnn
+
+upscale_video_artcnn(
+    "episode.mp4", "upscaled.mp4",
+    model_name="C4F32", scale=2, preset="high",
+)
+```
+
+---
+
 ### `amverge version`
 
 ```python
@@ -422,4 +465,65 @@ prefix = build_video_cache_prefix(Path("episode.mp4"))
 secs = Path("scenes") / f"{prefix}_secs.npy"
 
 check_if_path_exists(str(secs))  # raises FileNotFoundError if missing
+```
+
+### Upscaling
+
+```python
+from amverge import (
+    UPSCALE_AVAILABLE, QUALITY_PRESETS, UPSCALE_MODEL_KEYS, MODEL_FILES,
+    upscale_video, upscale_video_anime4k, upscale_video_artcnn,
+    ShuffleCUGANModel,
+    download_weights, is_weight_downloaded, get_weight_path,
+    verify_weight_hash, load_weights_if_available,
+    ANIME4K_MODE_PRESETS, ANIME4K_SHADER_FILES, ARTCNN_MODELS,
+)
+
+# Check availability
+print("Upscale available:", UPSCALE_AVAILABLE)
+
+# Quality presets
+print("Presets:", list(QUALITY_PRESETS.keys()))
+# {'archival': {'crf': 14, 'x264': 'slow', 'tune': 'animation'}, ...}
+
+# Available ML models
+print("ML models:", UPSCALE_MODEL_KEYS)  # ['shufflecugan', 'adore', ...]
+print("Model files:", MODEL_FILES)       # model_key -> (category, filename)
+
+# ArtCNN ONNX models
+print("ArtCNN:", list(ARTCNN_MODELS.keys()))  # ['C4F16', 'C4F32', 'R8F64']
+
+# Anime4K shader modes
+print("Anime4K modes:", list(ANIME4K_MODE_PRESETS.keys()))  # ['light', 'medium', 'strong']
+
+# Weight management
+download_weights("adore")                  # downloads from AniSmooth-Models GitHub
+is_weight_downloaded("shufflecugan")       # True/False
+path = get_weight_path("adore")            # full path to .pth file
+verify_weight_hash("adore", path)          # SHA-256 integrity check
+
+# Load weights into a model
+model = ShuffleCUGANModel("adore", scale=2)
+load_weights_if_available(model, "adore", device="cuda")
+
+# ML upscale pipeline (torch required)
+if UPSCALE_AVAILABLE:
+    upscale_video(
+        "episode.mp4", "upscaled.mp4",
+        model_name="adore", scale=2, preset="high",
+        fit_w=1920, fit_h=1080,
+        progress_cb=lambda pct, msg: print(f"[{pct}%] {msg}"),
+    )
+
+# Anime4K shader upscale (FFmpeg only, no ML deps)
+upscale_video_anime4k(
+    "episode.mp4", "upscaled.mp4",
+    scale=2, mode="medium", preset="high",
+)
+
+# ArtCNN ONNX upscale (needs onnxruntime)
+upscale_video_artcnn(
+    "episode.mp4", "upscaled.mp4",
+    model_name="C4F32", scale=2, preset="high",
+)
 ```

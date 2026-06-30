@@ -81,6 +81,9 @@ AMVerge-CLI/
 │   │   ├── export/
 │   │   │   ├── export.py        amverge export  (CODEC_PROFILES/AUDIO_FFMPEG dicts - wizard imports these)
 │   │   │   └── merge.py         amverge merge
+│   │   ├── upscaling/
+│   │   │   ├── upscale.py       amverge upscale  (ml / anime4k / artcnn methods, --credits)
+│   │   │   └── models.py        amverge models  (list/delete/download upscale model weights)
 │   │   ├── info/
 │   │   │   ├── info.py          amverge info  (stream metadata via PyAV)
 │   │   │   └── probe.py         amverge probe  (V2 diagnostics: codec/HEVC/keyframes/scene cache)
@@ -121,6 +124,13 @@ AMVerge-CLI/
 │       │   └── thumbnails_streaming.py  streaming thumbnail gen with IPC events (V1 backend mode)
 │       ├── transnet/
 │       │   └── transnet_constants.py    FRAME_WIDTH/HEIGHT/CHANNELS/BYTES, WINDOW_SIZE, STRIDE
+│       ├── upscaling/
+│       │   ├── __init__.py         exports: UPSCALE_AVAILABLE, QUALITY_PRESETS, upscale_video, ShuffleCUGANModel
+│       │   ├── upscale.py          upscale_video() - ML frame loop, FFmpeg pipe, audio mux
+│       │   ├── anime4k.py          upscale_video_anime4k() - FFmpeg + GLSL shaders (Anime4K by bloc97)
+│       │   ├── artcnn.py           upscale_video_artcnn() - ONNX Runtime inference (ArtCNN by Artoriuz)
+│       │   ├── shufflecugan.py     ShuffleCUGANModel - U-Net architecture with SE blocks
+│       │   └── weight_loader.py    download_weights(), verify_weight_hash(), load_weights_if_available()
 │       ├── video/
 │       │   ├── probe_utils.py   probe_video_fps/duration/dimensions/total_frames via ffprobe
 │       │   ├── scene_utils.py   scenes_to_objects(), scenes_frames_to_seconds()
@@ -228,6 +238,12 @@ for scene in result.scenes:
 | `core/keyframes/keyframe_align.py` | `get_keyframe_timestamps_pyav` uses PyAV demux with `type(stream.discard).nonkey` enum (PyAV 17.x; was `"NONKEY"` string in older PyAV). `classify_scenes_by_keyframe_alignment` partitions scenes for Phase 1 vs Phase 2 cutting. |
 | `core/thumbnails/thumbnails_streaming.py` | V1 backend mode only. Emits events as each thumbnail completes. Not used in V2 backend. |
 | `core/discord/discord_rpc.py` | Uses same CLIENT_ID as AMVerge app (`1497922104065134823`). Silently no-ops if pypresence not installed. `--no-rpc` flag on detect/export/merge to disable. Methods: idle/detecting/selecting/navigating/exporting/merging/complete/error. |
+| `commands/upscaling/upscale.py` | `amverge upscale` command. Three methods: `--method ml` (ShuffleCUGAN via torch/spandrel, `[upscale]` extra), `--method anime4k` (GLSL shaders via FFmpeg libplacebo, no ML deps), `--method artcnn` (ONNX runtime, `[upscale]` extra). `--credits` flag shows attributions. Weights cached at `%APPDATA%/amverge/weights/`. Models: adore, shufflecugan, fallin_soft, fallin_strong. Scale: 2x/4x. |
+| `commands/upscaling/models.py` | `amverge models` command. Lists all downloaded model weights, shaders, ONNX files with sizes and hashes. `--download <key>` fetches a model. `--delete <key>` removes a model from disk. `--storage` shows cache directories. |
+| `core/upscaling/upscale.py` | `upscale_video()` main pipeline: OpenCV frame read → torch tensor → model inference → rawvideo FFmpeg pipe → audio mux. Model loading: built-in ShuffleCUGAN first, spandrel fallback. Quality presets: CRF + x264 preset + tune=animation. |
+| `core/upscaling/weight_loader.py` | Downloads model weights from AniSmooth-Models GitHub releases. Resume support (HTTP Range), SHA-256 integrity verification, 3 retries. Same MODEL_FILES/MODEL_HASHES as AniSmooth desktop app. |
+| `core/upscaling/anime4k.py` | `upscale_video_anime4k()` - downloads Anime4K v4.0.1 GLSL shaders, applies via FFmpeg `libplacebo` filter. No ML deps, GPU shader-accelerated. Fallback to lanczos+unsharp if libplacebo unavailable. Three modes: light/medium/strong. |
+| `core/upscaling/artcnn.py` | `upscale_video_artcnn()` - downloads ArtCNN ONNX models, runs inference via onnxruntime. C4F16/C4F32 models for speed, R8F64 for quality. Credit: ArtCNN by Artoriuz. |
 | `commands/sidecar/rpc_server.py` | Hidden sidecar: `amverge rpc-server`. Long-lived process; Rust spawns it once and sends JSON commands via stdin (`{"type":"update","details":"...","state":"..."}`, `{"type":"clear"}`, `{"type":"shutdown"}`). Throttles Discord updates to max 1 per 15s. Exits when stdin closes or parent dies. |
 | `commands/sidecar/backend.py` | V2 backend. Positional interface: `amverge backend <video_path> <output_dir> [import_method]`. Rust replaces `python app.py <video> <dir>` with `amverge backend <video> <dir>` - no Rust changes needed. Emits V2 IPC events. Outputs JSON schema v1.0 with `schema_version`, `run_id`, `video` metadata block. |
 

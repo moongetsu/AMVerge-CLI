@@ -193,6 +193,68 @@ amverge bench episode.mp4 --skip-ml
 
 ## Utility Commands
 
+### `amverge upscale`
+
+Upscale video using AI super-resolution or GPU shaders.
+
+```bash
+amverge upscale episode.mp4 -o upscaled.mp4 --method ml --model adore -s 2
+amverge upscale episode.mp4 --method anime4k --anime4k-mode medium -s 2
+amverge upscale episode.mp4 --method artcnn --artcnn-model C4F32 -s 2
+amverge upscale episode.mp4 --method ml --model adore -s 4 -p archival
+amverge upscale episode.mp4 --method ml --model shufflecugan --fit-w 1920 --fit-h 1080
+amverge upscale --credits
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--output / -o` | `upscaled.mp4` | Output video file |
+| `--method` | `ml` | `ml`, `anime4k`, or `artcnn` |
+| `--model / -m` | `adore` | ML model: adore, shufflecugan, fallin_soft, fallin_strong |
+| `--artcnn-model` | `C4F32` | ArtCNN model: C4F16, C4F32, R8F64 |
+| `--anime4k-mode` | `medium` | Anime4K mode: light, medium, strong |
+| `--scale / -s` | `2` | Scale factor: 2 or 4 |
+| `--preset / -p` | `high` | Quality: archival, high, balanced, fast, draft |
+| `--fit-w` | `0` | Max output width (0 = no limit) |
+| `--fit-h` | `0` | Max output height (0 = no limit) |
+| `--credits` | false | Show credits for upscaling technologies |
+
+**Upscale methods:**
+
+| method | speed | deps | description |
+|--------|-------|------|-------------|
+| `anime4k` | fastest | FFmpeg only | GPU shader-based upscaler by bloc97 |
+| `artcnn` | fast | `[upscale]` | Lightweight CNN via ONNX Runtime, by Artoriuz |
+| `ml` | medium | `[upscale]` | ShuffleCUGAN via PyTorch/spandrel, based on AniSmooth |
+
+Anime4K uses FFmpeg `libplacebo` filter for GLSL shader pipeline (falls back to lanczos+unsharp if unavailable). Models downloaded on first use to `%APPDATA%/amverge/weights/`.
+
+---
+
+### `amverge models`
+
+Manage upscaling model files.
+
+```bash
+amverge models                             # list all downloaded models
+amverge models --download adore            # download a model
+amverge models --download anime4k          # download Anime4K shaders
+amverge models --download C4F32            # download ArtCNN model
+amverge models --delete shufflecugan       # delete a model from disk
+amverge models --delete anime4k            # delete all Anime4K shaders
+amverge models --storage                   # show cache directories
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--download` | - | Download a model by key |
+| `--delete` | - | Delete a model by key |
+| `--storage` | false | Show storage directories |
+
+**Model keys:** adore, shufflecugan, fallin_soft, fallin_strong, anime4k, C4F16, C4F32, R8F64
+
+---
+
 ### `amverge keyframes`
 
 Dump keyframe timestamps from a video.

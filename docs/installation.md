@@ -51,10 +51,25 @@ pip install amverge[discord]
 
 Adds pypresence for Discord RPC status updates during long operations.
 
+### AI Upscaling
+
+```bash
+pip install amverge[upscale]
+```
+
+Adds torch + opencv + spandrel for AI video upscaling (ShuffleCUGAN / ArtCNN ONNX).
+Anime4K shader-based upscaling uses FFmpeg only - no extra deps needed.
+
+```bash
+amverge upscale episode.mp4 --method ml --model adore -s 2
+amverge upscale episode.mp4 --method artcnn --artcnn-model C4F32
+amverge upscale episode.mp4 --method anime4k --anime4k-mode medium
+```
+
 ### All at once
 
 ```bash
-pip install amverge[ml,edge,discord]
+pip install amverge[ml,edge,discord,upscale]
 ```
 
 ---
