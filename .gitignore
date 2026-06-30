@@ -13,5 +13,5 @@ venv/
 *.mkv
 *.mov
 .env
-
+.agents
 test_videos
