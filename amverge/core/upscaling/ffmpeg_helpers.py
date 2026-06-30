@@ -117,26 +117,33 @@ def mux_audio(video_path, audio_source_path):
 
     ffmpeg = get_ffmpeg()
     tmp = str(video_path) + ".tmp.mp4"
-    cmd = [
-        ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
-        "-i", str(video_path),
-        "-i", str(audio_source_path),
-        "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
-        "-map", "0:v:0", "-map", "1:a:0?",
-        "-movflags", "+faststart", tmp,
-    ]
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True,
-                           timeout=300, creationflags=CREATE_NO_WINDOW)
-        if r.returncode == 0:
-            os.replace(tmp, str(video_path))
-            return True
-        if os.path.exists(tmp):
-            os.unlink(tmp)
-    except Exception:
+
+    def _mux(audio_codec_args):
+        cmd = [
+            ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
+            "-i", str(video_path),
+            "-i", str(audio_source_path),
+            "-c:v", "copy", *audio_codec_args,
+            "-map", "0:v:0", "-map", "1:a:0?",
+            "-movflags", "+faststart", tmp,
+        ]
+        try:
+            r = subprocess.run(cmd, capture_output=True, text=True,
+                               timeout=300, creationflags=CREATE_NO_WINDOW)
+            if r.returncode == 0:
+                os.replace(tmp, str(video_path))
+                return True
+        except Exception:
+            pass
         if os.path.exists(tmp):
             try:
                 os.unlink(tmp)
             except OSError:
                 pass
-    return False
+        return False
+
+    # Copy the original audio untouched when the codec fits MP4; only
+    # re-encode to AAC as a fallback for incompatible source codecs.
+    if _mux(["-c:a", "copy"]):
+        return True
+    return _mux(["-c:a", "aac", "-b:a", "192k"])

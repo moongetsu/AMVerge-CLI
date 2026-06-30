@@ -124,6 +124,26 @@
       "file": "ArtCNN_C4F32_DN.onnx",
       "input_channels": 1
     },
+    "R8F64_Chroma": {
+      "method": "onnx",
+      "name": "ArtCNN R8F64 + Chroma",
+      "scales": [2],
+      "credit": "by Artoriuz",
+      "description": "R8F64 luma 2x plus CNN chroma reconstruction (best quality)",
+      "file": "ArtCNN_R8F64.onnx",
+      "chroma_file": "ArtCNN_R8F64_Chroma.onnx",
+      "input_channels": 1
+    },
+    "R8F64_Chroma_DN": {
+      "method": "onnx",
+      "name": "ArtCNN R8F64 + Chroma DN",
+      "scales": [2],
+      "credit": "by Artoriuz",
+      "description": "R8F64 luma 2x plus CNN chroma reconstruction with denoise",
+      "file": "ArtCNN_R8F64.onnx",
+      "chroma_file": "ArtCNN_R8F64_Chroma_DN.onnx",
+      "input_channels": 1
+    },
     "realesrgan-x2": {
       "method": "ml",
       "name": "Real-ESRGAN x2",

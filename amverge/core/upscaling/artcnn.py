@@ -17,6 +17,13 @@ def get_artcnn_dir():
     return os.path.join(get_models_dir(), "artcnn")
 
 
+def _model_files(entry):
+    files = [entry["file"]]
+    if entry.get("chroma_file"):
+        files.append(entry["chroma_file"])
+    return files
+
+
 def get_artcnn_path(model_key):
     entry = get_model(model_key)
     if entry is None or "file" not in entry:
@@ -24,25 +31,25 @@ def get_artcnn_path(model_key):
     return os.path.join(get_artcnn_dir(), entry["file"])
 
 
-def is_artcnn_downloaded(model_key):
-    try:
-        return os.path.exists(get_artcnn_path(model_key))
-    except ValueError:
-        return False
-
-
-def download_artcnn(model_key, progress_cb=None, retries=3):
+def get_artcnn_chroma_path(model_key):
     entry = get_model(model_key)
-    if entry is None:
-        raise ValueError(f"Unknown ONNX model: {model_key}")
+    if entry is None or not entry.get("chroma_file"):
+        return None
+    return os.path.join(get_artcnn_dir(), entry["chroma_file"])
 
-    url = entry["url"]
-    dest_dir = get_artcnn_dir()
-    os.makedirs(dest_dir, exist_ok=True)
-    dest = os.path.join(dest_dir, entry["file"])
+
+def is_artcnn_downloaded(model_key):
+    entry = get_model(model_key)
+    if entry is None or "file" not in entry:
+        return False
+    d = get_artcnn_dir()
+    return all(os.path.exists(os.path.join(d, f)) for f in _model_files(entry))
+
+
+def _download_file(url, dest, label, progress_cb, retries):
     if os.path.exists(dest):
         return True
-
+    os.makedirs(os.path.dirname(dest), exist_ok=True)
     temp_path = dest + ".part"
     ctx = ssl._create_unverified_context()
 
@@ -78,14 +85,14 @@ def download_artcnn(model_key, progress_cb=None, retries=3):
                     downloaded += len(chunk)
                     if progress_cb and total > 0:
                         pct = min(99, int(downloaded * 100 / total))
-                        progress_cb(pct, f"Downloading {model_key}... {pct}%")
+                        progress_cb(pct, f"Downloading {label}... {pct}%")
 
             if total > 0 and downloaded != total:
                 raise ConnectionError(f"Incomplete: {downloaded}/{total} bytes")
 
             os.rename(temp_path, dest)
             if progress_cb:
-                progress_cb(100, f"Downloaded {model_key}")
+                progress_cb(100, f"Downloaded {label}")
             return True
         except (urllib.error.URLError, urllib.error.HTTPError, ConnectionError,
                 TimeoutError, OSError) as e:
@@ -95,8 +102,22 @@ def download_artcnn(model_key, progress_cb=None, retries=3):
                         os.remove(temp_path)
                     except OSError:
                         pass
-                raise RuntimeError(f"Download failed for {model_key}: {e}")
+                raise RuntimeError(f"Download failed for {label}: {e}")
     return False
+
+
+def download_artcnn(model_key, progress_cb=None, retries=3):
+    entry = get_model(model_key)
+    if entry is None:
+        raise ValueError(f"Unknown ONNX model: {model_key}")
+
+    dest_dir = get_artcnn_dir()
+    base_url = entry["url"].rsplit("/", 1)[0]
+
+    for fname in _model_files(entry):
+        url = entry["url"] if fname == entry["file"] else f"{base_url}/{fname}"
+        _download_file(url, os.path.join(dest_dir, fname), fname, progress_cb, retries)
+    return True
 
 
 def upscale_video_artcnn(input_path, output_path, model_key, entry, scale, preset,
@@ -111,15 +132,22 @@ def upscale_video_artcnn(input_path, output_path, model_key, entry, scale, prese
         providers.append("CUDAExecutionProvider")
     providers.append("CPUExecutionProvider")
 
-    onnx_path = get_artcnn_path(model_key)
-    if not os.path.exists(onnx_path):
+    if not is_artcnn_downloaded(model_key):
         download_artcnn(model_key, progress_cb)
 
     so = onnxruntime.SessionOptions()
     so.enable_cpu_mem_arena = False
     so.enable_mem_pattern = False
-    session = onnxruntime.InferenceSession(onnx_path, sess_options=so, providers=providers)
+
+    session = onnxruntime.InferenceSession(get_artcnn_path(model_key), sess_options=so, providers=providers)
     input_name = session.get_inputs()[0].name
+
+    chroma_session = None
+    chroma_input = None
+    chroma_path = get_artcnn_chroma_path(model_key)
+    if chroma_path:
+        chroma_session = onnxruntime.InferenceSession(chroma_path, sess_options=so, providers=providers)
+        chroma_input = chroma_session.get_inputs()[0].name
 
     cap = cv2.VideoCapture(str(input_path))
     if not cap.isOpened():
@@ -164,12 +192,20 @@ def upscale_video_artcnn(input_path, output_path, model_key, entry, scale, prese
             y_f = y.astype(np.float32) / 255.0
             y_tensor = y_f[np.newaxis, np.newaxis, ...]
 
-            outputs = session.run(None, {input_name: y_tensor})
-            y_upscaled = outputs[0][0, 0]
+            y_upscaled = session.run(None, {input_name: y_tensor})[0][0, 0]
+            y_norm = np.clip(y_upscaled, 0.0, 1.0)
+            y_out = (y_norm * 255.0).astype(np.uint8)
 
-            y_out = np.clip(y_upscaled * 255.0, 0, 255).astype(np.uint8)
-            u_out = cv2.resize(u, (out_w, out_h), interpolation=cv2.INTER_LANCZOS4)
-            v_out = cv2.resize(v, (out_w, out_h), interpolation=cv2.INTER_LANCZOS4)
+            if chroma_session is not None:
+                u_up = cv2.resize(u, (out_w, out_h), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255.0
+                v_up = cv2.resize(v, (out_w, out_h), interpolation=cv2.INTER_LINEAR).astype(np.float32) / 255.0
+                chroma_in = np.stack([y_norm, u_up, v_up], axis=0)[np.newaxis, ...]
+                chroma_out = chroma_session.run(None, {chroma_input: chroma_in})[0][0]
+                u_out = np.clip(chroma_out[0] * 255.0, 0, 255).astype(np.uint8)
+                v_out = np.clip(chroma_out[1] * 255.0, 0, 255).astype(np.uint8)
+            else:
+                u_out = cv2.resize(u, (out_w, out_h), interpolation=cv2.INTER_LANCZOS4)
+                v_out = cv2.resize(v, (out_w, out_h), interpolation=cv2.INTER_LANCZOS4)
 
             yuv_out = cv2.merge([y_out, u_out, v_out])
             result_bgr = cv2.cvtColor(yuv_out, cv2.COLOR_YUV2BGR)
@@ -180,7 +216,7 @@ def upscale_video_artcnn(input_path, output_path, model_key, entry, scale, prese
                 except (BrokenPipeError, OSError):
                     break
 
-            del outputs, y_upscaled, y_out, u_out, v_out, yuv_out, result_bgr, y_tensor, y_f, yuv
+            del y_upscaled, y_norm, y_out, u_out, v_out, yuv_out, result_bgr, y_tensor, y_f, yuv
             frame_idx += 1
             if frame_idx % 10 == 0:
                 gc.collect()
