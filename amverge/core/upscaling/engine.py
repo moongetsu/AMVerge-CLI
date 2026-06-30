@@ -214,7 +214,8 @@ def _upscale_ml(input_path, output_path, model_key, entry, scale, preset, fit_w,
         download_weights(model_key)
 
     weight_path = get_weight_path(model_key)
-    verify_weight_hash(model_key, weight_path)
+    if entry.get("hash"):
+        verify_weight_hash(model_key, weight_path)
 
     if not SPANDREL_AVAILABLE:
         raise RuntimeError("spandrel required. Run: pip install amverge[upscale]")
@@ -312,9 +313,17 @@ def _upscale_shader(input_path, output_path, entry, scale, preset, fit_w, fit_h,
     if progress_cb:
         progress_cb(20, f"Running shader upscale ({mode} mode, {scale}x)...")
 
+    if progress_cb:
+        progress_cb(20, f"Running shader upscale ({mode} mode, {scale}x)...")
+
     try:
         proc = subprocess.Popen(ffmpeg_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 creationflags=CREATE_NO_WINDOW)
+
+        if progress_cb:
+            progress_cb(50, "FFmpeg encoding in progress...")
+
+        out, err = proc.communicate(timeout=7200)
         out, err = proc.communicate(timeout=7200)
         if proc.returncode != 0:
             err_text = (err or out).decode(errors="replace").strip()
