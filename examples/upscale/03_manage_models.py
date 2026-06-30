@@ -1,50 +1,43 @@
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from amverge import (
-    MODEL_FILES, UPSCALE_MODEL_KEYS, ARTCNN_MODELS,
+    UPSCALE_REGISTRY, MODEL_FILES, UPSCALE_MODEL_KEYS, ARTCNN_MODELS,
     is_weight_downloaded, download_weights, get_weight_path,
+    get_ml_models, get_onnx_models, get_shader_models,
 )
 
-print("=== ML Models (ShuffleCUGAN, based on AniSmooth) ===")
+print("=== Browse the Registry ===")
+for key, entry in UPSCALE_REGISTRY.items():
+    scales = "/".join(f"{s}x" for s in entry["scales"])
+    print(f"  {entry['name']:20s}  method={entry['method']:6s}  scales={scales}")
+    print(f"    {entry.get('description', '')}")
+    print(f"    Credit: {entry.get('credit', '')}")
+    print()
+
+print("=== Query by Method ===")
+print(f"  ML models:   {list(get_ml_models().keys())}")
+print(f"  Shader:      {list(get_shader_models().keys())}")
+print(f"  ONNX:        {list(get_onnx_models().keys())}")
+
+print()
+print("=== Downloaded Status ===")
 for key in UPSCALE_MODEL_KEYS:
-    _, filename = MODEL_FILES[key]
+    status = "downloaded" if is_weight_downloaded(key) else "not downloaded"
     path = get_weight_path(key)
-    exists = is_weight_downloaded(key)
-    size = Path(path).stat().st_size if exists else 0
-    status = "downloaded" if exists else "not downloaded"
-    print(f"  {key:16s} {filename:35s} {size / (1024*1024):.1f} MB  [{status}]")
+    size_mb = Path(path).stat().st_size / (1024 * 1024) if Path(path).exists() else 0
+    print(f"  {key:20s}  [{status:14s}]  {size_mb:.1f} MB")
 
-print()
-print("=== ArtCNN Models (by Artoriuz) ===")
-for name, info in ARTCNN_MODELS.items():
-    from amverge.core.upscaling.artcnn import _get_artcnn_dir
-    path = Path(_get_artcnn_dir()) / info["file"]
-    exists = path.exists()
-    size = path.stat().st_size if exists else 0
-    status = "downloaded" if exists else "not downloaded"
-    print(f"  {name:8s} {info['file']:25s} {size / (1024*1024):.1f} MB  [{status}]")
-
-print()
-print("=== Anime4K Shaders (by bloc97) ===")
-from amverge import ANIME4K_SHADER_FILES
-from amverge.core.upscaling.anime4k import _get_anime4k_dir
-shader_dir = Path(_get_anime4k_dir())
-if shader_dir.exists():
-    count = sum(1 for f in shader_dir.iterdir() if f.suffix == ".glsl")
-    size = sum(f.stat().st_size for f in shader_dir.iterdir() if f.is_file())
-    print(f"  {count}/{len(ANIME4K_SHADER_FILES)} shaders downloaded ({size / 1024:.1f} KB)")
-else:
-    print(f"  No shaders downloaded. Use: amverge models --download anime4k")
-
-if len(sys.argv) > 1 and sys.argv[1] == "--download":
+if len(sys.argv) > 1 and sys.argv[1] == "--download-all":
     print()
     print("Downloading all models...")
     for key in UPSCALE_MODEL_KEYS:
         if not is_weight_downloaded(key):
-            download_weights(key)
-            print(f"  {key}: downloaded")
+            start = time.time()
+            download_weights(key, progress_cb=lambda p, m: print(f"\r  {key}: {p}%", end=""))
+            print(f"\r  {key}: downloaded in {time.time()-start:.1f}s")
         else:
             print(f"  {key}: already cached")
