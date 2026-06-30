@@ -8,7 +8,7 @@ AI video upscaling with three methods:
 
 ## Adding Models
 
-Models are defined in `core/upscaling/registry.json`. See [`registry.example.json`](registry.example.json) for the format.
+Models are defined in `core/upscaling/registry.json`. See [docs/registry.md](../../docs/registry.md) for the complete format reference with all fields explained.
 
 ## Requirements
 
@@ -26,4 +26,3 @@ amverge models --download anime4k    # pre-download Anime4K shaders
 | `01_ml_upscale.py` | Upscale with adore model (2x) |
 | `02_anime4k_upscale.py` | Fast filter-based upscale with Anime4K |
 | `03_manage_models.py` | List, download, and delete model files |
-| `registry.example.json` | Annotated registry format for adding models |
