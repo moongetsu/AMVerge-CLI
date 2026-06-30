@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from ...ui import banner, console, make_table
+from rich.markup import escape as rich_escape
+from rich.panel import Panel
+
+from ...ui import banner, console
 
 
 _CLI_ENTRIES = [
@@ -14,32 +17,42 @@ _CLI_ENTRIES = [
         "Portable FFmpeg auto-download to %APPDATA%/com.amverge.cli/",
         "9 upscale models: adore, shufflecugan, fallin_soft, fallin_strong, anime4k, C4F16, C4F32, R8F64, realesrgan-x2/x4/anime",
         "Library API: upscale_model(), SystemMonitor",
-        "pyproject.toml: \\[upscale\\] extra (torch, opencv, spandrel, onnxruntime)",
+        "pyproject.toml: [upscale] extra (torch, opencv, spandrel, onnxruntime)",
     ]),
     ("v0.1.0", [
         "Initial release: keyframe and edge detection methods",
         "amverge detect, export, merge, info commands",
         "Interactive wizard (no-args mode)",
         "IPC mode for Tauri sidecar replacement",
-        "Streaming thumbnails with THUMBNAIL_READY events",
-        "Discord RPC via pypresence (optional \\[discord\\] extra)",
-        "amverge backend hidden command: drop-in for python app.py",
+        "Streaming thumbnails",
+        "Discord RPC (optional)",
+        "amverge backend hidden command",
         "Python library: from amverge import detect_scenes",
     ]),
 ]
 
 
+def _render_version(version, changes):
+    lines = [f"[bold #22c55e]{version}[/]"]
+    lines.append("[dim]----------------------------------------[/]")
+    for i, c in enumerate(changes, 1):
+        lines.append(f"  [muted]{i:2d}.[/] {rich_escape(c)}")
+    return Panel("\n".join(lines), border_style="#22c55e", padding=(1, 2), safe_box=True)
+
+
 def changelog() -> None:
     """Show AMVerge CLI version history."""
     banner("changelog")
-
+    console.print()
     for version, changes in _CLI_ENTRIES:
-        t = make_table(
-            ("", "bright_black", {}),
-            ("", "bright_black", {}),
-            title=version,
-        )
-        for i, c in enumerate(changes, 1):
-            t.add_row(f"[muted]{i}.[/]", c)
-        console.print(t)
+        console.print(_render_version(version, changes))
         console.print()
+
+
+def whatsnew() -> None:
+    """Show what's new in the latest version."""
+    version, changes = _CLI_ENTRIES[0]
+    banner(f"what's new in {version}")
+    console.print()
+    console.print(_render_version(version, changes))
+    console.print()

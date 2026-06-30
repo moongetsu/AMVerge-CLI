@@ -14,7 +14,7 @@ from .commands.detection.keyframes import keyframes
 from .commands.detection.scenes import scenes
 from .commands.about.about import about
 from .commands.about.credits import credits
-from .commands.about.changelog import changelog
+from .commands.about.changelog import changelog, whatsnew
 from .commands.about.usage import usage
 from .commands.upscaling.upscale import upscale
 from .commands.upscaling.models import models
@@ -55,6 +55,7 @@ app.command()(usage)
 app.command()(about)
 app.command()(credits)
 app.command()(changelog)
+app.command(name="whatsnew")(whatsnew)
 
 
 @app.callback(invoke_without_command=True)
