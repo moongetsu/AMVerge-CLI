@@ -20,6 +20,7 @@ Port of the AMVerge desktop app backend by [Crptk](https://github.com/crptk). Sp
 - **TransNetV2 ML detection** - deep learning scene boundary detection (GPU/CPU)
 - **Keyframe detection** - fast I-frame based splitting, no re-encode
 - **Edge detection** - Canny edges + cosine similarity for difficult encodes
+- **AI Upscaling** - ShuffleCUGAN (ML), Anime4K (shaders), ArtCNN (ONNX) super-resolution
 - **Smart cut** - automatic lossless copy / smartcut / re-encode per scene
 - **15 codec profiles** - H.264, HEVC, AV1, ProRes with hardware (NVENC) support
 - **10 audio codecs** - AAC, FLAC, Opus, PCM, MP3, pass-through
@@ -57,6 +58,9 @@ amverge detect episode.mp4
 amverge export episode.mp4 --scenes episode_scenes/scenes.json --select 0,2,5-8
 amverge merge clip1.mp4 clip2.mp4 --output out.mp4
 amverge info episode.mp4
+amverge upscale episode.mp4 --method ml --model adore -s 2
+amverge upscale episode.mp4 --method anime4k --anime4k-mode medium
+amverge models                           # manage upscale model files
 ```
 
 ```python
@@ -75,9 +79,9 @@ for scene in result.scenes:
 ```txt
 amverge CLI  /  Python library
           ↓
-   amverge package
-          ↓
-    PyAV  +  FFmpeg  +  PyTorch (optional)
+    amverge package
+           ↓
+    PyAV  +  FFmpeg  +  PyTorch (optional)  +  ONNX (optional)
 ```
 
 **Detection:** Keyframe mode extracts I-frame timestamps via PyAV packet demux.
@@ -87,6 +91,8 @@ TransNetV2 runs a deep CNN on 48x27 RGB frames (GPU auto-detected, CPU fallback)
 **Cutting:** Scenes aligned to keyframes get lossless stream copy.
 Non-aligned scenes get smartcut (encode head + copy tail) or full re-encode.
 HEVC on CPU uses snapped-copy (nearest keyframe within 5s) to avoid slow re-encode.
+
+**Upscaling:** Three methods. ML mode runs ShuffleCUGAN U-Net via PyTorch/spandrel. Anime4K applies GLSL shaders via FFmpeg libplacebo (no ML deps). ArtCNN infers ONNX models via onnxruntime. All cache weights to `%APPDATA%/amverge/`.
 
 **Thumbnails:** Decoded via PyAV, resized to 960px, saved as progressive JPEG in parallel.
 **Similarity:** Adjacent thumbnails compared via cosine similarity on 8x8 pooled pixels.

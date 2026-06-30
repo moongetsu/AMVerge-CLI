@@ -126,6 +126,64 @@ from .core.transnet.transnet_constants import (
     STRIDE,
 )
 
+# -- Upscaling -----------------------------------------------------------
+try:
+    from .core.upscaling import (
+        UPSCALE_AVAILABLE,
+        UPSCALE_MODEL_KEYS,
+        MODEL_FILES,
+        upscale_model,
+        download_weights,
+        is_weight_downloaded,
+        get_weight_path,
+        verify_weight_hash,
+        load_weights_if_available,
+        ANIME4K_MODE_PRESETS,
+        SystemMonitor,
+        sample_gpu,
+        sample_cpu,
+        format_eta,
+    )
+except ImportError:
+    UPSCALE_AVAILABLE = False
+    UPSCALE_MODEL_KEYS = []
+    MODEL_FILES = {}
+    upscale_model = None
+    download_weights = None
+    is_weight_downloaded = None
+    get_weight_path = None
+    verify_weight_hash = None
+    load_weights_if_available = None
+    ANIME4K_MODE_PRESETS = {}
+    SystemMonitor = None
+    sample_gpu = None
+    sample_cpu = None
+    format_eta = lambda s: "--:--"
+
+from .core.upscaling.registry import (
+    UPSCALE_REGISTRY,
+    QUALITY_PRESETS,
+    get_model,
+    get_models_by_method,
+    get_ml_models,
+    get_shader_models,
+    get_onnx_models,
+    get_all_model_keys,
+    get_model_scales,
+    get_model_credit,
+)
+
+from .core.upscaling.anime4k import (
+    download_anime4k_shaders,
+    is_anime4k_downloaded,
+    libplacebo_available,
+)
+from .core.upscaling.artcnn import (
+    download_artcnn,
+    is_artcnn_downloaded,
+    get_artcnn_path,
+)
+
 __all__ = [
     "__version__",
     # Pipeline
@@ -188,4 +246,16 @@ __all__ = [
     # TransNetV2 constants
     "FRAME_WIDTH", "FRAME_HEIGHT", "FRAME_CHANNELS",
     "FRAME_BYTES", "WINDOW_SIZE", "STRIDE",
+    # Upscaling
+    "UPSCALE_AVAILABLE", "QUALITY_PRESETS", "UPSCALE_MODEL_KEYS",
+    "MODEL_FILES", "upscale_model",
+    "download_weights", "is_weight_downloaded", "get_weight_path",
+    "verify_weight_hash", "load_weights_if_available",
+    "ANIME4K_MODE_PRESETS",
+    "SystemMonitor", "sample_gpu", "sample_cpu", "format_eta",
+    "UPSCALE_REGISTRY", "QUALITY_PRESETS", "get_model", "get_models_by_method",
+    "get_ml_models", "get_shader_models", "get_onnx_models",
+    "get_all_model_keys", "get_model_scales", "get_model_credit",
+    "download_anime4k_shaders", "is_anime4k_downloaded", "libplacebo_available",
+    "download_artcnn", "is_artcnn_downloaded", "get_artcnn_path",
 ]

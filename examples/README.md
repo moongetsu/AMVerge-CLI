@@ -24,7 +24,7 @@ pip install amverge               # basic (keyframe, export, merge, info)
 pip install amverge[ml]           # + TransNetV2 ML detection
 pip install amverge[edge]         # + Canny edge detection
 pip install amverge[discord]      # + Discord Rich Presence
-pip install amverge[ml,edge,discord]  # everything
+pip install amverge[ml,edge,discord,upscale]  # everything
 ```
 
 Then run any script:
@@ -50,6 +50,7 @@ Scripts accept a video path as command-line argument. If none given, defaults to
 | [similarity/](similarity/) | detect visually similar adjacent scenes | - |
 | [diagnostics/](diagnostics/) | GPU check, version info, health check | - |
 | [discord-rpc/](discord-rpc/) | Discord Rich Presence status updates | [discord] |
+| [upscale/](upscale/) | AI video upscaling: ML, Anime4K shaders, ArtCNN | [upscale] for ML/ArtCNN |
 | [custom-pipeline/](custom-pipeline/) | full end-to-end pipeline from scratch | [ml] |
 
 ---
@@ -96,6 +97,11 @@ examples/
 ├── discord-rpc/
 │   ├── README.md
 │   └── 01_basic_rpc.py
+├── upscale/
+│   ├── README.md
+│   ├── 01_ml_upscale.py
+│   ├── 02_anime4k_upscale.py
+│   └── 03_manage_models.py
 ├── custom-pipeline/
 │   ├── README.md
 │   └── full_pipeline.py
