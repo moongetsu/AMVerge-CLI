@@ -125,6 +125,45 @@ from .core.transnet.transnet_constants import (
     STRIDE,
 )
 
+# -- Upscaling -----------------------------------------------------------
+try:
+    from .core.upscaling import (
+        UPSCALE_AVAILABLE,
+        QUALITY_PRESETS,
+        UPSCALE_MODEL_KEYS,
+        MODEL_FILES,
+        upscale_video,
+        ShuffleCUGANModel,
+        download_weights,
+        is_weight_downloaded,
+        get_weight_path,
+        verify_weight_hash,
+        load_weights_if_available,
+    )
+except ImportError:
+    UPSCALE_AVAILABLE = False
+    QUALITY_PRESETS = {}
+    UPSCALE_MODEL_KEYS = []
+    MODEL_FILES = {}
+    upscale_video = None
+    ShuffleCUGANModel = None
+    download_weights = None
+    is_weight_downloaded = None
+    get_weight_path = None
+    verify_weight_hash = None
+    load_weights_if_available = None
+
+from .core.upscaling.anime4k import (
+    upscale_video_anime4k,
+    ANIME4K_MODE_PRESETS,
+    ANIME4K_SHADER_FILES,
+)
+
+from .core.upscaling.artcnn import (
+    upscale_video_artcnn,
+    ARTCNN_MODELS,
+)
+
 __all__ = [
     "__version__",
     # Pipeline
@@ -187,4 +226,11 @@ __all__ = [
     # TransNetV2 constants
     "FRAME_WIDTH", "FRAME_HEIGHT", "FRAME_CHANNELS",
     "FRAME_BYTES", "WINDOW_SIZE", "STRIDE",
+    # Upscaling
+    "UPSCALE_AVAILABLE", "QUALITY_PRESETS", "UPSCALE_MODEL_KEYS",
+    "MODEL_FILES", "upscale_video", "ShuffleCUGANModel",
+    "download_weights", "is_weight_downloaded", "get_weight_path",
+    "verify_weight_hash", "load_weights_if_available",
+    "upscale_video_anime4k", "ANIME4K_MODE_PRESETS", "ANIME4K_SHADER_FILES",
+    "upscale_video_artcnn", "ARTCNN_MODELS",
 ]

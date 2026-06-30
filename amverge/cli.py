@@ -16,6 +16,8 @@ from .commands.about.about import about
 from .commands.about.credits import credits
 from .commands.about.changelog import changelog
 from .commands.about.usage import usage
+from .commands.upscaling.upscale import upscale
+from .commands.upscaling.models import models
 from .commands.sidecar.backend import backend
 from .commands.sidecar.rpc_server import rpc_server
 
@@ -43,6 +45,10 @@ app.command()(scenes)
 # App backend replacement (hidden - called by Rust sidecar)
 app.command(hidden=True)(backend)
 app.command(name="rpc-server", hidden=True)(rpc_server)
+
+# Upscale
+app.command()(upscale)
+app.command()(models)
 
 # Info
 app.command()(usage)
