@@ -13,7 +13,7 @@ from ...core.interpolation.registry import (
 
 
 def interpolate(
-    input: Path = typer.Argument(..., help="Input video file"),
+    input: Path = typer.Argument(None, help="Input video file"),
     output: Path = typer.Option(Path("interpolated.mp4"), "--output", "-o", help="Output video file"),
     model: str = typer.Option("rife4.25", "--model", "-m", help="Interpolation model key from registry"),
     factor: int = typer.Option(2, "--factor", "-f", help="Frame rate multiplier (2-16)"),
@@ -21,6 +21,7 @@ def interpolate(
     list_models: bool = typer.Option(False, "--list-models", help="List all available models"),
     credits: bool = typer.Option(False, "--credits", help="Show credits for interpolation technologies"),
     yes: bool = typer.Option(False, "--yes", "-y", help="Auto-confirm download prompts"),
+    download: bool = typer.Option(False, "--download", help="Download model weights without running"),
 ) -> None:
     """Interpolate video frames using AI frame interpolation (RIFE).
 
@@ -49,6 +50,25 @@ def interpolate(
         console.print()
         return
 
+    from ...core.interpolation import is_weight_downloaded as _interp_dl_check, download_weights as _interp_dl
+
+    if download:
+        if model not in INTERPOLATION_REGISTRY:
+            fail(f"Unknown model '{model}'. Use --list-models to see available models.")
+            raise typer.Exit(1)
+        entry = INTERPOLATION_REGISTRY[model]
+        console.print(f"  Downloading [accent]{entry['name']}[/accent]...")
+        with make_progress() as progress:
+            task_id = progress.add_task(f"Downloading {entry['name']}...", total=100)
+            def _dl_cb(pct, msg):
+                progress.update(task_id, completed=pct, description=msg)
+            _interp_dl(model, progress_cb=_dl_cb)
+        ok(f"Downloaded: {model}")
+        return
+
+    if input is None:
+        fail("Missing INPUT argument.")
+        raise typer.Exit(1)
     if not input.exists():
         fail(f"File not found: {input}")
         raise typer.Exit(1)
@@ -87,19 +107,17 @@ def interpolate(
     console.print(f"  Input:  [dim]{input}[/dim]")
     console.print(f"  Output: [dim]{output}[/dim]")
 
-    from ...core.interpolation import is_weight_downloaded, download_weights
-
-    if not is_weight_downloaded(model) and not yes:
+    if not _interp_dl_check(model) and not yes:
         console.print(f"\n  [warn]Model '{entry['name']}' not downloaded.[/warn]")
         typer.confirm(f"  Download {entry['name']}?", default=True, abort=True)
 
-    if not is_weight_downloaded(model):
+    if not _interp_dl_check(model):
         with make_progress() as progress:
             task_id = progress.add_task(f"Downloading {entry['name']}...", total=100)
             def _dl_cb(pct, msg):
                 progress.update(task_id, completed=pct, description=msg)
             try:
-                download_weights(model, progress_cb=_dl_cb)
+                _interp_dl(model, progress_cb=_dl_cb)
             except Exception as e:
                 fail(f"Download failed: {e}")
                 raise typer.Exit(1)
