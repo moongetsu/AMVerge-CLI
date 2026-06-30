@@ -131,34 +131,25 @@ try:
         UPSCALE_AVAILABLE,
         UPSCALE_MODEL_KEYS,
         MODEL_FILES,
-        upscale_video,
+        upscale_model,
         download_weights,
         is_weight_downloaded,
         get_weight_path,
         verify_weight_hash,
         load_weights_if_available,
+        ANIME4K_MODE_PRESETS,
     )
 except ImportError:
     UPSCALE_AVAILABLE = False
     UPSCALE_MODEL_KEYS = []
     MODEL_FILES = {}
-    upscale_video = None
+    upscale_model = None
     download_weights = None
     is_weight_downloaded = None
     get_weight_path = None
     verify_weight_hash = None
     load_weights_if_available = None
-
-from .core.upscaling.anime4k import (
-    upscale_video_anime4k,
-    ANIME4K_MODE_PRESETS,
-    ANIME4K_SHADER_FILES,
-)
-
-from .core.upscaling.artcnn import (
-    upscale_video_artcnn,
-    ARTCNN_MODELS,
-)
+    ANIME4K_MODE_PRESETS = {}
 
 from .core.upscaling.registry import (
     UPSCALE_REGISTRY,
@@ -236,11 +227,10 @@ __all__ = [
     "FRAME_BYTES", "WINDOW_SIZE", "STRIDE",
     # Upscaling
     "UPSCALE_AVAILABLE", "QUALITY_PRESETS", "UPSCALE_MODEL_KEYS",
-    "MODEL_FILES", "upscale_video",
+    "MODEL_FILES", "upscale_model",
     "download_weights", "is_weight_downloaded", "get_weight_path",
     "verify_weight_hash", "load_weights_if_available",
-    "upscale_video_anime4k", "ANIME4K_MODE_PRESETS", "ANIME4K_SHADER_FILES",
-    "upscale_video_artcnn", "ARTCNN_MODELS",
+    "ANIME4K_MODE_PRESETS",
     "UPSCALE_REGISTRY", "get_model", "get_models_by_method",
     "get_ml_models", "get_shader_models", "get_onnx_models",
     "get_all_model_keys", "get_model_scales", "get_model_credit",
