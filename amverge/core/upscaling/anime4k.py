@@ -115,7 +115,7 @@ def _chain_shader_files(mode, scale):
     return files
 
 
-def _write_combined_shader(mode, scale):
+def _write_combined_shader(mode, scale, dest_dir):
     shader_dir = get_shader_dir()
     files = _chain_shader_files(mode, scale)
 
@@ -128,7 +128,7 @@ def _write_combined_shader(mode, scale):
         with open(os.path.join(shader_dir, f), "r", encoding="utf-8", errors="replace") as fh:
             parts.append(fh.read())
 
-    combined = os.path.join(shader_dir, f"_chain_{mode}_{scale}x.glsl")
+    combined = os.path.join(dest_dir, f"_chain_{mode}_{scale}x.glsl")
     with open(combined, "w", encoding="utf-8") as fh:
         fh.write("\n\n".join(parts))
     return combined
@@ -144,15 +144,13 @@ def _fit_dims(w, h, scale, fit_w, fit_h):
     return out_w, out_h
 
 
-def _build_libplacebo_cmd(input_path, output_path, out_w, out_h, combined_shader,
+def _build_libplacebo_cmd(input_path, output_path, out_w, out_h, shader_name,
                           crf, x264_preset, tune):
     enc_threads = encode_thread_count(out_w, out_h)
-    shader_path = combined_shader.replace("\\", "/")
     cmd = [
         get_ffmpeg(), "-y", "-hide_banner", "-loglevel", "error",
-        "-init_hw_device", "vulkan",
         "-i", str(input_path),
-        "-vf", f"libplacebo=w={out_w}:h={out_h}:custom_shader_path={shader_path}",
+        "-vf", f"libplacebo=w={out_w}:h={out_h}:custom_shader_path={shader_name}",
         "-c:v", "libx264", "-crf", str(crf), "-preset", x264_preset,
         "-profile:v", "high", "-level:v", "5.1",
         "-pix_fmt", "yuv420p",
@@ -196,9 +194,9 @@ def _build_fallback_cmd(input_path, output_path, out_w, out_h, mode,
     return cmd
 
 
-def _run(cmd, timeout):
+def _run(cmd, timeout, cwd=None):
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            creationflags=CREATE_NO_WINDOW)
+                            cwd=cwd, creationflags=CREATE_NO_WINDOW)
     try:
         out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
@@ -227,18 +225,26 @@ def upscale_video_anime4k(input_path, output_path, entry, scale, preset,
             if progress_cb:
                 progress_cb(5, "Downloading Anime4K shaders...")
             download_anime4k_shaders(progress_cb)
+        dest_dir = os.path.dirname(str(output_path)) or "."
+        combined = None
         try:
-            combined = _write_combined_shader(mode, scale)
+            combined = _write_combined_shader(mode, scale, dest_dir)
             cmd = _build_libplacebo_cmd(input_path, output_path, out_w, out_h,
-                                        combined, q["crf"], q["x264"], tune)
+                                        os.path.basename(combined), q["crf"], q["x264"], tune)
             if progress_cb:
                 progress_cb(30, f"Anime4K shaders ({mode}, {scale}x) via libplacebo...")
-            ok, err_text = _run(cmd, timeout=7200)
+            ok, err_text = _run(cmd, timeout=7200, cwd=dest_dir)
             used_shaders = ok
             if not ok and progress_cb:
                 progress_cb(35, "libplacebo failed, falling back to lanczos...")
         except FileNotFoundError:
             used_shaders = False
+        finally:
+            if combined and os.path.exists(combined):
+                try:
+                    os.remove(combined)
+                except OSError:
+                    pass
 
     if not used_shaders:
         cmd = _build_fallback_cmd(input_path, output_path, out_w, out_h,
