@@ -144,6 +144,18 @@ if secs_path.exists():
 ### `amverge models`
 
 ```python
+from amverge import UPSCALE_REGISTRY, get_ml_models, get_onnx_models, get_shader_models
+
+# Query the registry (loaded from registry.json)
+print("All models:", list(UPSCALE_REGISTRY.keys()))
+print("ML models:", list(get_ml_models().keys()))
+print("ONNX models:", list(get_onnx_models().keys()))
+
+# Model metadata
+for key, entry in UPSCALE_REGISTRY.items():
+    print(f"{key}: {entry['name']} ({entry['method']}) {entry['scales']}")
+    print(f"  {entry.get('description', '')}")
+
 from amverge import MODEL_FILES, UPSCALE_MODEL_KEYS, is_weight_downloaded
 
 print("Available ML models:", UPSCALE_MODEL_KEYS)
@@ -471,7 +483,8 @@ check_if_path_exists(str(secs))  # raises FileNotFoundError if missing
 
 ```python
 from amverge import (
-    UPSCALE_AVAILABLE, QUALITY_PRESETS, UPSCALE_MODEL_KEYS, MODEL_FILES,
+    UPSCALE_AVAILABLE, QUALITY_PRESETS,
+    UPSCALE_REGISTRY, get_ml_models, get_onnx_models, get_shader_models,
     upscale_video, upscale_video_anime4k, upscale_video_artcnn,
     ShuffleCUGANModel,
     download_weights, is_weight_downloaded, get_weight_path,
@@ -482,22 +495,25 @@ from amverge import (
 # Check availability
 print("Upscale available:", UPSCALE_AVAILABLE)
 
-# Quality presets
+# Quality presets (from registry.json)
 print("Presets:", list(QUALITY_PRESETS.keys()))
 # {'archival': {'crf': 14, 'x264': 'slow', 'tune': 'animation'}, ...}
 
-# Available ML models
-print("ML models:", UPSCALE_MODEL_KEYS)  # ['shufflecugan', 'adore', ...]
-print("Model files:", MODEL_FILES)       # model_key -> (category, filename)
+# Model registry - all models from registry.json
+for key, entry in UPSCALE_REGISTRY.items():
+    print(f"{key}: {entry['name']} ({entry['method']}) scales={entry['scales']}")
+    print(f"  {entry.get('description')} | {entry.get('credit')}")
 
-# ArtCNN ONNX models
-print("ArtCNN:", list(ARTCNN_MODELS.keys()))  # ['C4F16', 'C4F32', 'R8F64']
+# Query by method
+ml_models = get_ml_models()          # {"adore": {...}, "shufflecugan": {...}, ...}
+onnx_models = get_onnx_models()      # {"C4F16": {...}, "C4F32": {...}, ...}
+shader_models = get_shader_models()  # {"anime4k": {...}}
 
 # Anime4K shader modes
 print("Anime4K modes:", list(ANIME4K_MODE_PRESETS.keys()))  # ['light', 'medium', 'strong']
 
 # Weight management
-download_weights("adore")                  # downloads from AniSmooth-Models GitHub
+download_weights("adore")                  # downloads from registry URL
 is_weight_downloaded("shufflecugan")       # True/False
 path = get_weight_path("adore")            # full path to .pth file
 verify_weight_hash("adore", path)          # SHA-256 integrity check

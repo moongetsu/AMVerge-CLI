@@ -195,45 +195,51 @@ amverge bench episode.mp4 --skip-ml
 
 ### `amverge upscale`
 
-Upscale video using AI super-resolution or GPU shaders.
+Upscale video using AI super-resolution or GPU-accelerated filters.
 
 ```bash
 amverge upscale episode.mp4 -o upscaled.mp4 --method ml --model adore -s 2
 amverge upscale episode.mp4 --method anime4k --anime4k-mode medium -s 2
-amverge upscale episode.mp4 --method artcnn --artcnn-model C4F32 -s 2
+amverge upscale episode.mp4 --method artcnn --onnx-model C4F32 -s 2
 amverge upscale episode.mp4 --method ml --model adore -s 4 -p archival
 amverge upscale episode.mp4 --method ml --model shufflecugan --fit-w 1920 --fit-h 1080
-amverge upscale --credits
+amverge upscale --list-models                       # show all available models
+amverge upscale --credits                           # show credits
+amverge upscale episode.mp4 --method ml -y          # auto-confirm all downloads
 ```
 
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--output / -o` | `upscaled.mp4` | Output video file |
 | `--method` | `ml` | `ml`, `anime4k`, or `artcnn` |
-| `--model / -m` | `adore` | ML model: adore, shufflecugan, fallin_soft, fallin_strong |
-| `--artcnn-model` | `C4F32` | ArtCNN model: C4F16, C4F32, R8F64 |
-| `--anime4k-mode` | `medium` | Anime4K mode: light, medium, strong |
+| `--model / -m` | `adore` | ML model key (see --list-models) |
+| `--onnx-model` | `C4F32` | ONNX model key (see --list-models) |
+| `--anime4k-mode` | `medium` | Anime4K intensity: light, medium, strong |
 | `--scale / -s` | `2` | Scale factor: 2 or 4 |
 | `--preset / -p` | `high` | Quality: archival, high, balanced, fast, draft |
 | `--fit-w` | `0` | Max output width (0 = no limit) |
 | `--fit-h` | `0` | Max output height (0 = no limit) |
+| `--list-models` | false | Show all available models and descriptions |
 | `--credits` | false | Show credits for upscaling technologies |
+| `--yes / -y` | false | Auto-confirm all download prompts |
 
 **Upscale methods:**
 
 | method | speed | deps | description |
 |--------|-------|------|-------------|
-| `anime4k` | fastest | FFmpeg only | GPU shader-based upscaler by bloc97 |
+| `anime4k` | fastest | FFmpeg only | Lanczos + unsharp + smartblur filters |
 | `artcnn` | fast | `[upscale]` | Lightweight CNN via ONNX Runtime, by Artoriuz |
-| `ml` | medium | `[upscale]` | ShuffleCUGAN via PyTorch/spandrel, based on AniSmooth |
+| `ml` | medium | `[upscale]` | RealCUGAN via PyTorch/spandrel |
 
-Anime4K uses FFmpeg `libplacebo` filter for GLSL shader pipeline (falls back to lanczos+unsharp if unavailable). Models downloaded on first use to `%APPDATA%/amverge/weights/`.
+**Adding models:** Edit `amverge/core/upscaling/registry.json`. All CLI discovery is automatic.
+
+Models and FFmpeg are auto-downloaded to `%APPDATA%/com.amverge.cli/`. On first run, prompts ask before downloading (skip with `--yes`).
 
 ---
 
 ### `amverge models`
 
-Manage upscaling model files.
+Manage upscaling model files. Lists all models from the registry.
 
 ```bash
 amverge models                             # list all downloaded models
@@ -251,7 +257,8 @@ amverge models --storage                   # show cache directories
 | `--delete` | - | Delete a model by key |
 | `--storage` | false | Show storage directories |
 
-**Model keys:** adore, shufflecugan, fallin_soft, fallin_strong, anime4k, C4F16, C4F32, R8F64
+**Model keys:** Use `amverge upscale --list-models` for the full list. Keys come from `registry.json`.
+Storage: `%APPDATA%/com.amverge.cli/models/upscale/{key}/`
 
 ---
 
