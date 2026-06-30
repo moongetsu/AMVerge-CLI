@@ -1,3 +1,4 @@
+import gc
 import os
 import ssl
 import subprocess
@@ -114,7 +115,10 @@ def upscale_video_artcnn(input_path, output_path, model_key, entry, scale, prese
     if not os.path.exists(onnx_path):
         download_artcnn(model_key, progress_cb)
 
-    session = onnxruntime.InferenceSession(onnx_path, providers=providers)
+    so = onnxruntime.SessionOptions()
+    so.enable_cpu_mem_arena = False
+    so.enable_mem_pattern = False
+    session = onnxruntime.InferenceSession(onnx_path, sess_options=so, providers=providers)
     input_name = session.get_inputs()[0].name
 
     cap = cv2.VideoCapture(str(input_path))
@@ -175,7 +179,10 @@ def upscale_video_artcnn(input_path, output_path, model_key, entry, scale, prese
                 except (BrokenPipeError, OSError):
                     break
 
+            del outputs, y_upscaled, y_out, u_out, v_out, yuv_out, result_bgr, y_tensor, y_f, yuv
             frame_idx += 1
+            if frame_idx % 10 == 0:
+                gc.collect()
             if progress_cb:
                 pct = min(100, int((frame_idx / total_frames) * 100))
                 progress_cb(pct, f"ArtCNN upscaling... {frame_idx}/{total_frames}")
