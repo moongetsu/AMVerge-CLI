@@ -184,6 +184,16 @@ from .core.upscaling.artcnn import (
     get_artcnn_path,
 )
 
+# -- Interpolation --------------------------------------------------------
+from .core.interpolation import (
+    flowframes_available,
+    run_flowframes,
+    cancel_flowframes,
+    set_flowframes_path,
+    get_flowframes_path,
+    FLOWFRAMES_VERSION,
+)
+
 __all__ = [
     "__version__",
     # Pipeline
@@ -253,9 +263,12 @@ __all__ = [
     "verify_weight_hash", "load_weights_if_available",
     "ANIME4K_MODE_PRESETS",
     "SystemMonitor", "sample_gpu", "sample_cpu", "format_eta",
-    "UPSCALE_REGISTRY", "QUALITY_PRESETS", "get_model", "get_models_by_method",
+    "UPSCALE_REGISTRY", "get_model", "get_models_by_method",
     "get_ml_models", "get_shader_models", "get_onnx_models",
     "get_all_model_keys", "get_model_scales", "get_model_credit",
     "download_anime4k_shaders", "is_anime4k_downloaded", "libplacebo_available",
     "download_artcnn", "is_artcnn_downloaded", "get_artcnn_path",
+    # Interpolation
+    "flowframes_available", "run_flowframes", "cancel_flowframes",
+    "set_flowframes_path", "get_flowframes_path", "FLOWFRAMES_VERSION",
 ]

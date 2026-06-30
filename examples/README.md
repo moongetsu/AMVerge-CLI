@@ -51,6 +51,7 @@ Scripts accept a video path as command-line argument. If none given, defaults to
 | [diagnostics/](diagnostics/) | GPU check, version info, health check | - |
 | [discord-rpc/](discord-rpc/) | Discord Rich Presence status updates | [discord] |
 | [upscale/](upscale/) | AI video upscaling: ML, Anime4K shaders, ArtCNN | [upscale] for ML/ArtCNN |
+| [interpolation/](interpolation/) | Flowframes 1.42.0 frame interpolation | Flowframes 1.42.0 |
 | [custom-pipeline/](custom-pipeline/) | full end-to-end pipeline from scratch | [ml] |
 
 ---
@@ -102,6 +103,9 @@ examples/
 │   ├── 01_ml_upscale.py
 │   ├── 02_anime4k_upscale.py
 │   └── 03_manage_models.py
+├── interpolation/
+│   ├── README.md
+│   └── 01_flowframes_interpolate.py
 ├── custom-pipeline/
 │   ├── README.md
 │   └── full_pipeline.py

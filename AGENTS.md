@@ -52,6 +52,7 @@ twine upload dist/*
 | GPU | PyTorch (CUDA auto-detected, CPU fallback) |
 | Edge detection | OpenCV (optional, `[edge]` extra) |
 | Package | hatchling, PyPI name `amverge` |
+| Frame interpolation | Flowframes 1.42.0 (external .exe, Windows-only, NVIDIA GPU recommended) |
 | Discord RPC | pypresence (optional, `[discord]` extra) |
 
 ## Directory Map
@@ -84,6 +85,9 @@ AMVerge-CLI/
 │   │   ├── upscaling/
 │   │   │   ├── upscale.py       amverge upscale  (ml / anime4k / artcnn methods, --credits)
 │   │   │   └── models.py        amverge models  (list/delete/download upscale model weights)
+│   │   ├── interpolation/
+│   │   │   ├── flowframes.py    amverge flowframes  (Flowframes 1.42.0 external process)
+│   │   │   └── flowframes_path.py   amverge flowframes-path  (set/show Flowframes.exe path)
 │   │   ├── info/
 │   │   │   ├── info.py          amverge info  (stream metadata via PyAV)
 │   │   │   └── probe.py         amverge probe  (V2 diagnostics: codec/HEVC/keyframes/scene cache)
@@ -134,6 +138,9 @@ AMVerge-CLI/
 │       │   ├── monitor.py           SystemMonitor - GPU/CPU/RAM sampling + ETA during upscale
 │       │   ├── __init__.py          exports: UPSCALE_REGISTRY, upscale_model, download_*, is_*_downloaded, ...
 │       │   └── weight_loader.py     download_weights(), verify_weight_hash(), load_weights_if_available() (ml .pth only)
+│       ├── interpolation/
+│       │   ├── flowframes.py         run_flowframes(), flowframes_available(), cancel_flowframes() - Flowframes 1.42.0 integration
+│       │   └── __init__.py           exports: run_flowframes, flowframes_available, get_flowframes_path, set_flowframes_path
 │       ├── video/
 │       │   ├── probe_utils.py   probe_video_fps/duration/dimensions/total_frames via ffprobe
 │       │   ├── scene_utils.py   scenes_to_objects(), scenes_frames_to_seconds()
@@ -247,6 +254,7 @@ for scene in result.scenes:
 | `core/upscaling/weight_loader.py` | Downloads ml `.pth` weights to `models/upscale/<key>/<file>`. Resume support (HTTP Range), SHA-256 integrity verification, 3 retries. ml-only; ONNX downloads live in `artcnn.py`. |
 | `core/upscaling/anime4k.py` | `upscale_video_anime4k()` - REAL Anime4K. Downloads v4.0.1 GLSL shaders (`models/upscale/anime4k/`), concatenates the mode's shader chain into `_chain_<mode>_<scale>x.glsl`, applies via FFmpeg `libplacebo=custom_shader_path`. Auto-detects libplacebo (`ffmpeg -filters`); falls back to lanczos+unsharp if absent. Modes light/medium/strong = Upscale_CNN_x2_{S,M,VL} (+ Restore_CNN for medium/strong); scale=4 adds a 2nd upscale pass. **Two FFmpeg gotchas (do not reintroduce):** (1) NEVER pass global `-init_hw_device vulkan` - it breaks libplacebo output negotiation (EINVAL); libplacebo self-inits its Vulkan device. (2) `custom_shader_path` cannot take an absolute Windows path (drive colon = filtergraph option separator, no escaping survives). The chain is staged into the OUTPUT file's dir, ffmpeg runs with `cwd=that dir`, path passed as bare basename, file deleted after. |
 | `core/upscaling/artcnn.py` | `upscale_video_artcnn()` - ArtCNN ONNX (luma-only 2x doublers). Downloads to `models/upscale/artcnn/<file>` (single dir - was a path-mismatch bug vs weight_loader's per-key dir). Per-frame: BGR→YUV, run Y `[1,1,H,W]` → `[1,1,2H,2W]`, lanczos-upscale U/V, recombine, rawvideo pipe. Session uses `enable_cpu_mem_arena=False` + per-frame `del`/`gc` (HD full-frame inference OOMs otherwise). **Chroma models** (entry has `chroma_file`, e.g. `R8F64_Chroma`): loads a 2nd session; chroma net takes `[1,3,H,W]` (Y_2x + bilinear-upscaled U/V) → `[1,2,H,W]` reconstructed U/V, replacing the lanczos chroma path. `download_artcnn` fetches all `_model_files(entry)`; `is_artcnn_downloaded` checks all. Input/output tensor names auto-detected. v1.6.2 assets verified. Credit: ArtCNN by Artoriuz. |
+| `core/interpolation/flowframes.py` | Flowframes 1.42.0 integration. Spawns external `Flowframes.exe` with `-a -nc -mdc` args. Strips `NoDefaultCurrentDirectoryInExePath` from child env (Flowframes' bare-name ffprobe fails otherwise). Kills existing instance before spawn. Tails `FlowframesData/logs/<session>/sessionlog.txt` for progress (`Interpolated X/Y Frames`, `%`). Locates output by newest media file in `-o` dir with size stability check. Four cut modes: `copy` (start on keyframe), `snapped_copy` (HEVC CPU - snaps to nearest keyframe within 5s), `smartcut` (H.264 - encode tiny head + lossless tail), `reencode` (full fallback). Never remove the HEVC CPU path - HEVC re-encode without CUDA takes 10+ minutes. |
 | `commands/sidecar/rpc_server.py` | Hidden sidecar: `amverge rpc-server`. Long-lived process; Rust spawns it once and sends JSON commands via stdin (`{"type":"update","details":"...","state":"..."}`, `{"type":"clear"}`, `{"type":"shutdown"}`). Throttles Discord updates to max 1 per 15s. Exits when stdin closes or parent dies. |
 | `commands/sidecar/backend.py` | V2 backend. Positional interface: `amverge backend <video_path> <output_dir> [import_method]`. Rust replaces `python app.py <video> <dir>` with `amverge backend <video> <dir>` - no Rust changes needed. Emits V2 IPC events. Outputs JSON schema v1.0 with `schema_version`, `run_id`, `video` metadata block. |
 

@@ -479,6 +479,43 @@ secs = Path("scenes") / f"{prefix}_secs.npy"
 check_if_path_exists(str(secs))  # raises FileNotFoundError if missing
 ```
 
+### Interpolation
+
+```python
+from amverge import (
+    flowframes_available, run_flowframes, cancel_flowframes,
+    get_flowframes_path, set_flowframes_path, FLOWFRAMES_VERSION,
+)
+
+# Check availability
+if flowframes_available():
+    print(f"Flowframes {FLOWFRAMES_VERSION} ready")
+
+# Run interpolation
+output = run_flowframes(
+    input_path="episode.mp4",
+    output_dir="./interpolated",
+    factor=2,
+    ai="RifeCuda",
+    model="RIFE 4.13.2",
+    output_format="Mp4",
+    encoder="X264",
+    pix_fmt="Yuv420P",
+    progress_cb=lambda pct, msg: print(f"[{pct}%] {msg}"),
+    log_cb=lambda line: print(line),
+)
+print(f"Output: {output}")
+
+# Cancel running interpolation
+cancel_flowframes()
+
+# Configure Flowframes.exe path
+set_flowframes_path("C:\\Flowframes\\Flowframes.exe")
+current = get_flowframes_path()
+```
+
+---
+
 ### Upscaling
 
 ```python

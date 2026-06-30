@@ -299,6 +299,49 @@ amverge cache ./scenes --clear-all         # clear all caches in directory
 
 ---
 
+### `amverge flowframes`
+
+Run Flowframes 1.42.0 frame interpolation. Requires Flowframes 1.42.0 Patreon installed.
+
+```bash
+amverge flowframes episode.mp4
+amverge flowframes episode.mp4 -f 4 --ai RifeCuda --model "RIFE 4.13.2"
+amverge flowframes episode.mp4 -f 2 --encoder H264 --quality 20
+amverge flowframes episode.mp4 --scene-change --scene-sensitivity 0.2
+amverge flowframes episode.mp4 -f 2 --max-height 720 --timeout 3600
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `INPUT` (arg) | required | Input video file |
+| `--output / -o` | `interpolated.mp4` | Output video file |
+| `--factor / -f` | `2` | Frame rate multiplier (2-16) |
+| `--ai` | `RifeNcnn` | AI: RifeCuda, RifeNcnn, RifeNcnnVs, FlavrCuda, DainNcnn, XvfiCuda |
+| `--model / -m` | `RIFE 4.26` | Model name (varies by AI) |
+| `--format` | `Mp4` | Output container |
+| `--encoder / -e` | `X264` | Video encoder |
+| `--pix-fmt` | `Yuv420P` | Pixel format |
+| `--quality / -q` | - | Quality setting (integer) |
+| `--max-fps` | - | Output FPS cap |
+| `--max-height` | - | Output height cap |
+| `--scene-change` | false | Enable scene change detection |
+| `--scene-sensitivity` | - | Scene change sensitivity |
+| `--ff-path` | auto | Path to Flowframes.exe |
+| `--timeout` | `36000` | Max runtime in seconds |
+
+Auto-detects Flowframes.exe at `%LOCALAPPDATA%\Flowframes\`. Use `--ff-path` to set (persisted).
+
+### `amverge flowframes-path`
+
+Show or set the Flowframes.exe path.
+
+```bash
+amverge flowframes-path                           # show current path
+amverge flowframes-path "C:\Flowframes\Flowframes.exe"   # set and persist
+```
+
+---
+
 ## Info Commands
 
 ```bash
