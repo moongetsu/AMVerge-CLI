@@ -7,7 +7,7 @@ from ...ui import banner, console
 
 
 _CLI_ENTRIES = [
-    ("v0.2.2", [
+    ("v0.3.0", [
         "Interpolation: RIFE PyTorch CUDA/CPU inference (interpolate command)",
         "Interpolation: 18 RIFE models (4.6 through 4.25-heavy, Elexor, PerVFI)",
         "Interpolation: SystemMonitor live display (GPU util/temp/VRAM, CPU/RAM, ETA)",
