@@ -5,6 +5,8 @@ from .flowframes import (
     set_flowframes_path,
     get_flowframes_path,
     FLOWFRAMES_VERSION,
+    FLOWFRAMES_MODELS,
+    is_flowframes_model_installed,
 )
 
 from .registry import (
@@ -40,6 +42,8 @@ __all__ = [
     "set_flowframes_path",
     "get_flowframes_path",
     "FLOWFRAMES_VERSION",
+    "FLOWFRAMES_MODELS",
+    "is_flowframes_model_installed",
     "INTERPOLATION_REGISTRY",
     "QUALITY_PRESETS",
     "get_model",

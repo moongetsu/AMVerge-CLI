@@ -341,3 +341,106 @@ def set_flowframes_path(exe_path: str) -> None:
 
 def get_flowframes_path() -> Optional[str]:
     return _find_flowframes_exe()
+
+
+def _get_flowframes_pkgs_dir() -> Optional[str]:
+    localappdata = os.environ.get("LOCALAPPDATA", "")
+    if localappdata:
+        pkgs = os.path.join(localappdata, "Flowframes", "FlowframesData", "pkgs")
+        if os.path.exists(pkgs):
+            return pkgs
+    return None
+
+
+FLOWFRAMES_MODELS = {
+    "rife4.25-ncnn": {
+        "name": "RIFE 4.25 (NCNN)",
+        "engine": "RifeNcnn",
+        "model_name": "RIFE 4.25",
+        "subdir": "rife-ncnn",
+        "credit": "by hzwer / megvii-research",
+        "description": "RIFE v4.25 NCNN variant (Flowframes default)",
+    },
+    "rife4.26-ncnn": {
+        "name": "RIFE 4.26 (NCNN)",
+        "engine": "RifeNcnn",
+        "model_name": "RIFE 4.26",
+        "subdir": "rife-ncnn",
+        "credit": "by hzwer / megvii-research",
+        "description": "RIFE v4.26 NCNN variant (Flowframes default)",
+    },
+    "rife4.13-cuda": {
+        "name": "RIFE 4.13 (CUDA)",
+        "engine": "RifeCuda",
+        "model_name": "RIFE 4.13.2",
+        "subdir": "rife-cuda",
+        "credit": "by hzwer / megvii-research",
+        "description": "RIFE v4.13 CUDA variant",
+    },
+    "rife4.14-cuda": {
+        "name": "RIFE 4.14 (CUDA)",
+        "engine": "RifeCuda",
+        "model_name": "RIFE 4.14",
+        "subdir": "rife-cuda",
+        "credit": "by hzwer / megvii-research",
+        "description": "RIFE v4.14 CUDA variant",
+    },
+    "rife4.25-vs": {
+        "name": "RIFE 4.25 (NCNN VS)",
+        "engine": "RifeNcnnVs",
+        "model_name": "RIFE 4.25",
+        "subdir": "rife-ncnn-vs",
+        "credit": "by hzwer / megvii-research",
+        "description": "RIFE v4.25 NCNN VapourSynth variant",
+    },
+    "rife4.26-vs": {
+        "name": "RIFE 4.26 (NCNN VS)",
+        "engine": "RifeNcnnVs",
+        "model_name": "RIFE 4.26",
+        "subdir": "rife-ncnn-vs",
+        "credit": "by hzwer / megvii-research",
+        "description": "RIFE v4.26 NCNN VapourSynth variant",
+    },
+    "dain-ncnn": {
+        "name": "DAIN (NCNN)",
+        "engine": "DainNcnn",
+        "model_name": "DAIN",
+        "subdir": "dain-ncnn",
+        "credit": "by baohengtao / DAIN",
+        "description": "Depth-Aware Video Frame Interpolation NCNN",
+    },
+    "flavr-cuda": {
+        "name": "FLAVR (CUDA)",
+        "engine": "FlavrCuda",
+        "model_name": "FLAVR",
+        "subdir": "flavr-cuda",
+        "credit": "by tarun005 / FLAVR",
+        "description": "Flow-Agnostic Video Representations for Fast Frame Interpolation",
+    },
+    "xvfi-cuda": {
+        "name": "XVFI (CUDA)",
+        "engine": "XvfiCuda",
+        "model_name": "XVFI",
+        "subdir": "xvfi-cuda",
+        "credit": "by JihyongOh / XVFI",
+        "description": "eXtreme Video Frame Interpolation CUDA",
+    },
+}
+
+
+def is_flowframes_model_installed(key: str) -> bool:
+    entry = FLOWFRAMES_MODELS.get(key)
+    if not entry:
+        return False
+    pkgs_dir = _get_flowframes_pkgs_dir()
+    if not pkgs_dir:
+        return False
+    subdir = os.path.join(pkgs_dir, entry["subdir"])
+    if not os.path.isdir(subdir):
+        return False
+    if key.startswith("rife"):
+        return any(
+            d.startswith("rife-v") for d in os.listdir(subdir)
+            if os.path.isdir(os.path.join(subdir, d))
+        )
+    return True

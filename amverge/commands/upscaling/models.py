@@ -26,6 +26,7 @@ from ...core.interpolation.weight_loader import (
     download_weights as _interp_download,
     get_weight_path as _interp_weight_path,
 )
+from ...core.interpolation.flowframes import FLOWFRAMES_MODELS, is_flowframes_model_installed, flowframes_available
 
 
 def _format_size(size_bytes):
@@ -72,6 +73,7 @@ def _upscale_is_downloaded_check(key):
 def models(
     upscale_only: bool = typer.Option(False, "--upscale", "-u", help="Show only upscale models"),
     interpolation_only: bool = typer.Option(False, "--interpolation", "-i", help="Show only interpolation models"),
+    flowframes_only: bool = typer.Option(False, "--flowframes", "-ff", help="Show only Flowframes models"),
     delete: Optional[str] = typer.Option(None, "--delete", help="Delete a model by key"),
     download: Optional[str] = typer.Option(None, "--download", help="Download a model by key"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show file paths and hashes"),
@@ -80,7 +82,7 @@ def models(
     """Manage model files (upscaling and interpolation).
 
     Without options, lists all models from both registries with download status.
-    Use --upscale or --interpolation to filter. Use --delete to remove a model,
+    Use --upscale, --interpolation, or --flowframes to filter. Use --delete to remove a model,
     --download to fetch one.
     """
     banner("models")
@@ -90,32 +92,38 @@ def models(
         console.print(f"  Anime4K:       [dim]{os.path.join(get_models_dir(), 'anime4k')}[/dim]")
         console.print(f"  ArtCNN ONNX:   [dim]{os.path.join(get_models_dir(), 'artcnn')}[/dim]")
         console.print(f"  Interpolation: [dim]{os.path.join(get_models_dir(), 'interpolation')}[/dim]")
+        console.print(f"  Flowframes:    [dim]%LOCALAPPDATA%\\Flowframes\\FlowframesData\\pkgs\\[/dim]")
         console.print(f"  FFmpeg:        [dim]{os.path.dirname(os.path.dirname(WEIGHTS_DIR))}/ffmpeg/bin[/dim]")
         return
 
-    show_both = not upscale_only and not interpolation_only
+    show_both = not upscale_only and not interpolation_only and not flowframes_only
 
     if delete:
-        _handle_delete(delete, upscale_only, interpolation_only, show_both)
+        _handle_delete(delete, upscale_only, interpolation_only, flowframes_only, show_both)
         return
 
     if download:
-        _handle_download_action(download, upscale_only, interpolation_only, show_both)
+        _handle_download_action(download, upscale_only, interpolation_only, flowframes_only, show_both)
         return
 
     if show_both or upscale_only:
         _show_upscale_table(verbose)
     if show_both or interpolation_only:
-        if show_both:
+        if show_both or upscale_only:
             console.print()
         _show_interpolation_table(verbose)
+    if show_both or flowframes_only:
+        if show_both or upscale_only or interpolation_only:
+            console.print()
+        _show_flowframes_table(verbose)
 
 
-def _handle_delete(key, upscale_only, interpolation_only, show_both):
+def _handle_delete(key, upscale_only, interpolation_only, flowframes_only, show_both):
     in_upscale = key in UPSCALE_REGISTRY or key in get_ml_models() or key in get_onnx_models() or key == "anime4k"
     in_interp = key in INTERPOLATION_REGISTRY
+    in_ff = key in FLOWFRAMES_MODELS
 
-    if not in_upscale and not in_interp:
+    if not in_upscale and not in_interp and not in_ff:
         fail(f"Unknown key: {key}")
         raise typer.Exit(1)
 
@@ -123,6 +131,8 @@ def _handle_delete(key, upscale_only, interpolation_only, show_both):
         _do_upscale_delete(key)
     if in_interp and (show_both or interpolation_only):
         _do_interp_delete(key)
+    if in_ff:
+        fail("Flowframes models are managed by Flowframes.exe, not amverge")
 
 
 def _do_upscale_delete(key):
@@ -160,11 +170,12 @@ def _do_interp_delete(key):
         fail(f"Not on disk: {key}")
 
 
-def _handle_download_action(key, upscale_only, interpolation_only, show_both):
+def _handle_download_action(key, upscale_only, interpolation_only, flowframes_only, show_both):
     in_upscale = key in get_ml_models() or key == "anime4k" or key in get_onnx_models()
     in_interp = key in INTERPOLATION_REGISTRY
+    in_ff = key in FLOWFRAMES_MODELS
 
-    if not in_upscale and not in_interp:
+    if not in_upscale and not in_interp and not in_ff:
         fail(f"Unknown key: {key}")
         raise typer.Exit(1)
 
@@ -172,6 +183,8 @@ def _handle_download_action(key, upscale_only, interpolation_only, show_both):
         _do_upscale_download(key)
     if in_interp and (show_both or interpolation_only):
         _do_interp_download(key)
+    if in_ff:
+        fail("Flowframes models are managed by Flowframes.exe, not amverge")
 
 
 def _do_upscale_download(key):
@@ -260,3 +273,31 @@ def _show_interpolation_table(verbose):
     total = sum(1 for k in INTERPOLATION_REGISTRY if _interp_is_downloaded(k))
     console.print(f"  [dim]{total}/{len(INTERPOLATION_REGISTRY)} interpolation models downloaded[/]  "
                   f"[dim]--download <key> | --delete <key> | --verbose | --storage[/]")
+
+
+def _show_flowframes_table(verbose):
+    if not flowframes_available:
+        return
+
+    if verbose:
+        columns = ("Key", "bright_black", {}), ("Engine", "bright_black", {}), ("Model", "bright_black", {}), ("", "bright_black", {})
+    else:
+        columns = ("Model", "bright_black", {}), ("Engine", "bright_black", {"width": 14}), ("", "bright_black", {})
+
+    table = make_table(*columns, title=None)
+
+    for key, entry in FLOWFRAMES_MODELS.items():
+        installed = is_flowframes_model_installed(key)
+        engine_tag = "[#a78bfa]rife[/]" if entry["engine"].startswith("Rife") else f"[#facc15]{entry['engine']}[/]"
+        status = "[accent]installed[/]" if installed else "[muted]not installed[/]"
+
+        if verbose:
+            table.add_row(f"[bold]{key}[/]", entry["engine"], entry["model_name"], status)
+        else:
+            table.add_row(f"[bold]{entry['name']}[/]", engine_tag, status)
+
+    console.print(table)
+    console.print()
+    total = sum(1 for k in FLOWFRAMES_MODELS if is_flowframes_model_installed(k))
+    console.print(f"  [dim]{total}/{len(FLOWFRAMES_MODELS)} Flowframes models installed[/]  "
+                  f"[dim]managed by Flowframes.exe | --verbose | --storage[/]")
