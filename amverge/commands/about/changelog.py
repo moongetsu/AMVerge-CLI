@@ -7,14 +7,21 @@ from ...ui import banner, console
 
 
 _CLI_ENTRIES = [
-    ("v0.2.1", [
+    ("v0.2.2", [
         "Interpolation: RIFE PyTorch CUDA/CPU inference (interpolate command)",
         "Interpolation: 18 RIFE models (4.6 through 4.25-heavy, Elexor, PerVFI)",
         "Interpolation: SystemMonitor live display (GPU util/temp/VRAM, CPU/RAM, ETA)",
-        "Interpolation: Flowframes 1.42.0 external process (flowframes command)",
-        "Models: show both upscale and interpolation tables by default",
-        "Models: --upscale / --interpolation flags to filter (was --type)",
-        "Models: --delete and --download search both registries automatically",
+        "Interpolation: --no-monitor flag, --yes auto-confirm, FFmpeg bootstrap",
+        "Flowframes: Flowframes 1.42.0 integration (flowframes command)",
+        "Flowframes: SystemMonitor live display, --no-monitor flag, GPU info banner",
+        "Flowframes: 9 models in FLOWFRAMES_MODELS registry (RIFE NCNN/CUDA/VS, DAIN, FLAVR, XVFI)",
+        "Models: show upscale + interpolation + Flowframes tables by default",
+        "Models: --upscale / --interpolation / --flowframes flags (replaces --type)",
+        "Models: --delete and --download search all registries automatically",
+        "CLI: interpolate, flowframes, models added to usage reference page",
+        "Examples: 02_rife_interpolate.py added, 03_manage_models shows interpolation too",
+    ]),
+    ("v0.2.1", [
         "Anime4K: real GLSL shaders via FFmpeg libplacebo (was lanczos approximation)",
         "Anime4K: auto-detect libplacebo, lanczos+unsharp fallback when unavailable",
         "Anime4K: shader chains per mode (light/medium/strong), 2 passes for 4x",
