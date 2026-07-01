@@ -145,15 +145,21 @@ if secs_path.exists():
 
 ```python
 from amverge import UPSCALE_REGISTRY, get_ml_models, get_onnx_models, get_shader_models
+from amverge import INTERPOLATION_REGISTRY
 
-# Query the registry (loaded from registry.json)
-print("All models:", list(UPSCALE_REGISTRY.keys()))
+# Upscale registry
+print("All upscale models:", list(UPSCALE_REGISTRY.keys()))
 print("ML models:", list(get_ml_models().keys()))
 print("ONNX models:", list(get_onnx_models().keys()))
 
-# Model metadata
 for key, entry in UPSCALE_REGISTRY.items():
     print(f"{key}: {entry['name']} ({entry['method']}) {entry['scales']}")
+    print(f"  {entry.get('description', '')}")
+
+# Interpolation registry
+print("All interpolation models:", list(INTERPOLATION_REGISTRY.keys()))
+for key, entry in INTERPOLATION_REGISTRY.items():
+    print(f"{key}: {entry['name']} (rife) heavy={entry.get('heavy', False)}")
     print(f"  {entry.get('description', '')}")
 
 from amverge import MODEL_FILES, UPSCALE_MODEL_KEYS, is_weight_downloaded
@@ -161,6 +167,11 @@ from amverge import MODEL_FILES, UPSCALE_MODEL_KEYS, is_weight_downloaded
 print("Available ML models:", UPSCALE_MODEL_KEYS)
 for key in UPSCALE_MODEL_KEYS:
     print(f"  {key}: {'downloaded' if is_weight_downloaded(key) else 'not downloaded'}")
+
+from amverge.core.interpolation import is_weight_downloaded as interp_dl_check
+
+for key in INTERPOLATION_REGISTRY:
+    print(f"  {key}: {'downloaded' if interp_dl_check(key) else 'not downloaded'}")
 ```
 
 ---
@@ -478,6 +489,53 @@ secs = Path("scenes") / f"{prefix}_secs.npy"
 
 check_if_path_exists(str(secs))  # raises FileNotFoundError if missing
 ```
+
+### `amverge interpolate`
+
+```python
+from amverge import (
+    interpolate_video, INTERPOLATION_REGISTRY,
+    get_interp_model, get_rife_models,
+    download_interp_weights, is_interp_weight_downloaded,
+    get_interp_weight_path, verify_interp_weight_hash,
+    load_interp_weights_if_available,
+)
+
+# Query registry
+print("Models:", list(INTERPOLATION_REGISTRY.keys()))
+for key, entry in INTERPOLATION_REGISTRY.items():
+    print(f"  {key}: {entry['name']} ({entry['description']})")
+    print(f"    Credit: {entry['credit']}")
+
+# Run interpolation
+interpolate_video(
+    input_path="episode.mp4",
+    output_path="interpolated.mp4",
+    model_key="rife4.25",
+    factor=2,
+    preset="high",
+    progress_cb=lambda pct, msg: print(f"[{pct}%] {msg}"),
+)
+
+# Weight management
+if not is_interp_weight_downloaded("rife4.25-heavy"):
+    download_interp_weights("rife4.25-heavy",
+        progress_cb=lambda pct, msg: print(f"[{pct}%] {msg}"))
+```
+
+---
+
+### `amverge flowframes`
+
+Run Flowframes 1.42.0 frame interpolation (free 1.36.0 support planned). Requires Flowframes.exe installed.
+
+```python
+from amverge import (
+    flowframes_available, run_flowframes, cancel_flowframes,
+    get_flowframes_path, set_flowframes_path, FLOWFRAMES_VERSION,
+)
+
+---
 
 ### Upscaling
 
