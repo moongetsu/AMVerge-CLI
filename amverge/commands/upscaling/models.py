@@ -70,7 +70,8 @@ def _upscale_is_downloaded_check(key):
 
 
 def models(
-    model_type: str = typer.Option("upscale", "--type", "-t", help="Model category: upscale, interpolation"),
+    upscale_only: bool = typer.Option(False, "--upscale", "-u", help="Show only upscale models"),
+    interpolation_only: bool = typer.Option(False, "--interpolation", "-i", help="Show only interpolation models"),
     delete: Optional[str] = typer.Option(None, "--delete", help="Delete a model by key"),
     download: Optional[str] = typer.Option(None, "--download", help="Download a model by key"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show file paths and hashes"),
@@ -78,9 +79,9 @@ def models(
 ) -> None:
     """Manage model files (upscaling and interpolation).
 
-    Without options, lists all models from the registry with download status.
-    Use --type to switch between upscale (default) and interpolation models.
-    Use --delete to remove a model, --download to fetch one.
+    Without options, lists all models from both registries with download status.
+    Use --upscale or --interpolation to filter. Use --delete to remove a model,
+    --download to fetch one.
     """
     banner("models")
 
@@ -92,66 +93,112 @@ def models(
         console.print(f"  FFmpeg:        [dim]{os.path.dirname(os.path.dirname(WEIGHTS_DIR))}/ffmpeg/bin[/dim]")
         return
 
-    if model_type not in ("upscale", "interpolation"):
-        fail(f"Unknown type '{model_type}'. Valid: upscale, interpolation")
-        raise typer.Exit(1)
+    show_both = not upscale_only and not interpolation_only
 
-    if model_type == "upscale":
-        _handle_upscale(delete, download, verbose)
-    else:
-        _handle_interpolation(delete, download, verbose)
-
-
-def _handle_upscale(delete, download, verbose):
     if delete:
-        if delete in get_ml_models():
-            path = get_weight_path(delete)
-            if os.path.exists(path):
-                os.unlink(path)
-                ok(f"Deleted: {delete}")
-            else:
-                fail(f"Not on disk: {delete}")
-        elif delete == "anime4k":
-            import glob
-            shader_dir = get_shader_dir()
-            deleted = 0
-            if os.path.exists(shader_dir):
-                for fp in glob.glob(os.path.join(shader_dir, "*.glsl")):
-                    os.unlink(fp)
-                    deleted += 1
-            ok(f"Deleted {deleted} shader files")
-        elif delete in get_onnx_models():
-            path = get_artcnn_path(delete)
-            if os.path.exists(path):
-                os.unlink(path)
-                ok(f"Deleted: {delete}")
-            else:
-                fail(f"Not on disk: {delete}")
-        else:
-            fail(f"Unknown key: {delete}")
-            raise typer.Exit(1)
+        _handle_delete(delete, upscale_only, interpolation_only, show_both)
         return
 
     if download:
-        if download in get_ml_models():
-            entry = get_ml_models()[download]
-            console.print(f"  Downloading [accent]{entry.get('name', download)}[/accent]...")
-            success = _upscale_download(download)
-            ok(f"Downloaded: {download}") if success else fail(f"Failed: {download}")
-        elif download == "anime4k":
-            console.print("  Downloading [accent]Anime4K shaders[/accent]...")
-            shaders = download_anime4k_shaders()
-            ok(f"Downloaded {len(shaders)} shader files")
-        elif download in get_onnx_models():
-            entry = get_onnx_models()[download]
-            console.print(f"  Downloading [accent]{entry.get('name', download)}[/accent]...")
-            download_artcnn(download)
-            ok(f"Downloaded: {download}")
-        else:
-            fail(f"Unknown key: {download}")
-            raise typer.Exit(1)
+        _handle_download_action(download, upscale_only, interpolation_only, show_both)
         return
 
+    if show_both or upscale_only:
+        _show_upscale_table(verbose)
+    if show_both or interpolation_only:
+        if show_both:
+            console.print()
+        _show_interpolation_table(verbose)
+
+
+def _handle_delete(key, upscale_only, interpolation_only, show_both):
+    in_upscale = key in UPSCALE_REGISTRY or key in get_ml_models() or key in get_onnx_models() or key == "anime4k"
+    in_interp = key in INTERPOLATION_REGISTRY
+
+    if not in_upscale and not in_interp:
+        fail(f"Unknown key: {key}")
+        raise typer.Exit(1)
+
+    if in_upscale and (show_both or upscale_only):
+        _do_upscale_delete(key)
+    if in_interp and (show_both or interpolation_only):
+        _do_interp_delete(key)
+
+
+def _do_upscale_delete(key):
+    if key in get_ml_models():
+        path = get_weight_path(key)
+        if os.path.exists(path):
+            os.unlink(path)
+            ok(f"Deleted: {key}")
+        else:
+            fail(f"Not on disk: {key}")
+    elif key == "anime4k":
+        import glob
+        shader_dir = get_shader_dir()
+        deleted = 0
+        if os.path.exists(shader_dir):
+            for fp in glob.glob(os.path.join(shader_dir, "*.glsl")):
+                os.unlink(fp)
+                deleted += 1
+        ok(f"Deleted {deleted} shader files")
+    elif key in get_onnx_models():
+        path = get_artcnn_path(key)
+        if os.path.exists(path):
+            os.unlink(path)
+            ok(f"Deleted: {key}")
+        else:
+            fail(f"Not on disk: {key}")
+
+
+def _do_interp_delete(key):
+    path = _interp_weight_path(key)
+    if os.path.exists(path):
+        os.unlink(path)
+        ok(f"Deleted: {key}")
+    else:
+        fail(f"Not on disk: {key}")
+
+
+def _handle_download_action(key, upscale_only, interpolation_only, show_both):
+    in_upscale = key in get_ml_models() or key == "anime4k" or key in get_onnx_models()
+    in_interp = key in INTERPOLATION_REGISTRY
+
+    if not in_upscale and not in_interp:
+        fail(f"Unknown key: {key}")
+        raise typer.Exit(1)
+
+    if in_upscale and (show_both or upscale_only):
+        _do_upscale_download(key)
+    if in_interp and (show_both or interpolation_only):
+        _do_interp_download(key)
+
+
+def _do_upscale_download(key):
+    if key in get_ml_models():
+        entry = get_ml_models()[key]
+        console.print(f"  Downloading [accent]{entry.get('name', key)}[/accent]...")
+        success = _upscale_download(key)
+        ok(f"Downloaded: {key}") if success else fail(f"Failed: {key}")
+    elif key == "anime4k":
+        console.print("  Downloading [accent]Anime4K shaders[/accent]...")
+        shaders = download_anime4k_shaders()
+        ok(f"Downloaded {len(shaders)} shader files")
+    elif key in get_onnx_models():
+        entry = get_onnx_models()[key]
+        console.print(f"  Downloading [accent]{entry.get('name', key)}[/accent]...")
+        download_artcnn(key)
+        ok(f"Downloaded: {key}")
+
+
+def _do_interp_download(key):
+    entry = INTERPOLATION_REGISTRY[key]
+    console.print(f"  Downloading [accent]{entry.get('name', key)}[/accent]...")
+    _interp_download(key)
+    ok(f"Downloaded: {key}")
+
+
+def _show_upscale_table(verbose):
     if verbose:
         columns = ("Key", "bright_black", {}), ("File", "bright_black", {}), ("Size", "bright_black", {}), ("Hash", "bright_black", {}), ("Status", "bright_black", {})
     else:
@@ -186,31 +233,7 @@ def _handle_upscale(delete, download, verbose):
                   f"[dim]--download <key> | --delete <key> | --verbose | --storage[/]")
 
 
-def _handle_interpolation(delete, download, verbose):
-    if delete:
-        if delete in INTERPOLATION_REGISTRY:
-            path = _interp_weight_path(delete)
-            if os.path.exists(path):
-                os.unlink(path)
-                ok(f"Deleted: {delete}")
-            else:
-                fail(f"Not on disk: {delete}")
-        else:
-            fail(f"Unknown key: {delete}")
-            raise typer.Exit(1)
-        return
-
-    if download:
-        if download in INTERPOLATION_REGISTRY:
-            entry = INTERPOLATION_REGISTRY[download]
-            console.print(f"  Downloading [accent]{entry.get('name', download)}[/accent]...")
-            _interp_download(download)
-            ok(f"Downloaded: {download}")
-        else:
-            fail(f"Unknown key: {download}")
-            raise typer.Exit(1)
-        return
-
+def _show_interpolation_table(verbose):
     if verbose:
         columns = ("Key", "bright_black", {}), ("File", "bright_black", {}), ("Size", "bright_black", {}), ("Hash", "bright_black", {}), ("Status", "bright_black", {})
     else:
