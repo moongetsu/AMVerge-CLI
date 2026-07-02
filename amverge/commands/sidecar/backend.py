@@ -14,6 +14,7 @@ from ...core.video.scene_utils import scenes_to_objects
 from ...core.keyframes.keyframe_align import get_keyframe_timestamps_pyav, classify_scenes_by_keyframe_alignment
 from ...core.codec.codec_utils import check_if_hevc
 from ...core.cutting.smart_cut import cut_all_scenes
+from ...core.thumbnails import make_thumbnail
 
 
 def backend(
@@ -37,13 +38,21 @@ def backend(
     out_dir = Path(output_dir)
 
     import numpy as np
-    try:    
+    try:
         import torch
     except ImportError:
         print(f"Install with: pip install amverge[ml]")
         raise SystemExit(1)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
+
+    from ...core.detection.nelux_runtime import nelux_available
+    _gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none"
+    log(
+        f"[diag] scene backend via AMVerge CLI | torch={torch.__version__} "
+        f"cuda_available={torch.cuda.is_available()} device={device} "
+        f"gpu={_gpu_name} nelux_available={nelux_available()}"
+    )
 
     def _error_exit(error: Exception) -> None:
         import traceback
@@ -87,11 +96,22 @@ def backend(
             scenes_frames = np.load(scenes_frames_path)
             emit_progress(20, "Loaded cached scene detection results.")
         else:
+            import time as _time
             emit_progress(20, "Decoding frames for TransNetV2...")
+            _t_decode = _time.perf_counter()
             frames = decode_video_frames_nelux(input_video)
+            log(
+                f"[diag] decode done: {len(frames)} frames in "
+                f"{_time.perf_counter() - _t_decode:.2f}s (device={device})"
+            )
 
             emit_progress(55, "Running TransNetV2 scene detection...")
+            _t_infer = _time.perf_counter()
             scenes_secs, scenes_frames = run_model_one_pass(frames, input_video)
+            log(
+                f"[diag] inference done: {len(scenes_secs)} scenes in "
+                f"{_time.perf_counter() - _t_infer:.2f}s (device={device})"
+            )
 
             np.save(scenes_secs_path, scenes_secs)
             np.save(scenes_frames_path, scenes_frames)
@@ -105,13 +125,21 @@ def backend(
         if import_method == "video_files":
             source_str = str(input_video)
             source_name = input_video.name
+
+            def _thumb_path(idx: int) -> str:
+                return str(out_dir / f"thumb_{idx:04d}.jpg")
+
             initial_clips = [
                 {
                     "scene_index": s["scene_index"],
                     "start_sec": s["start_sec"],
                     "end_sec": s["end_sec"],
                     "path": source_str,
-                    "thumbnail": source_str,
+                    # Deterministic jpg poster path (set upfront like production so the
+                    # grid knows it immediately); thumbnail_ready gates display until
+                    # the file lands via THUMBNAIL_READY below.
+                    "thumbnail": _thumb_path(s["scene_index"]),
+                    "thumbnail_ready": False,
                     "original_file": source_name,
                     "original_path": source_str,
                     "clip_path": None,
@@ -140,11 +168,34 @@ def backend(
             scenes_out_dir = out_dir / "scenes"
             cut_by_idx: dict[int, dict] = {}
 
+            # Static poster thumbnails (production parity): a jpg first-frame per cut
+            # clip, generated the moment its clip is ready and streamed via
+            # THUMBNAIL_READY so tiles fill in progressively instead of sitting as
+            # skeletons. Runs off the cut workers on its own small pool.
+            import concurrent.futures as _futures
+            _thumb_pool = _futures.ThreadPoolExecutor(max_workers=4)
+            _thumb_futs: list = []
+
+            def _gen_thumb(idx: int, clip_path: str) -> None:
+                try:
+                    # Only signal ready when a jpg was actually written — otherwise
+                    # the tile would load a missing file and show a broken image.
+                    if make_thumbnail(clip_path, _thumb_path(idx)):
+                        emit_event(f"THUMBNAIL_READY|{idx}")
+                    else:
+                        log(f"Thumbnail produced no frame for scene {idx}")
+                except Exception as exc:  # noqa: BLE001
+                    log(f"Thumbnail failed for scene {idx}: {exc}")
+
             def _on_clip_ready(result: dict) -> None:
                 cut_by_idx[result["scene_index"]] = result
                 clip_path = result.get("clip_path") or ""
                 clip_mode = result.get("clip_mode") or "failed"
                 emit_event(f"CLIP_READY|{result['scene_index']}|{clip_path}|{clip_mode}")
+                if clip_path and Path(clip_path).exists():
+                    _thumb_futs.append(
+                        _thumb_pool.submit(_gen_thumb, result["scene_index"], clip_path)
+                    )
 
             cut_all_scenes(
                 input_file=input_video,
@@ -184,10 +235,18 @@ def backend(
                 emit_progress_updates=False,
             )
 
+            # Drain the poster pool so the final manifest reflects which jpgs exist.
+            for _f in _thumb_futs:
+                _f.result()
+            _thumb_pool.shutdown(wait=True)
+
             for scene in scenes:
                 cut = cut_by_idx.get(scene["scene_index"], {})
                 scene["clip_path"] = cut.get("clip_path")
                 scene["clip_mode"] = cut.get("clip_mode", "failed")
+                thumb = _thumb_path(scene["scene_index"])
+                scene["thumbnail"] = thumb
+                scene["thumbnail_ready"] = Path(thumb).exists()
 
         emit_progress(97, "Finalizing scene manifest...")
 

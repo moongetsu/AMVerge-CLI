@@ -32,22 +32,31 @@ def make_thumbnail(clip_path: str, thumb_path: str) -> bool:
         >>> make_thumbnail("scene_0001.mp4", "scene_0001.jpg")
         True
     """
+    def _save(image) -> None:
+        new_h = max(1, int(THUMB_WIDTH * image.height / image.width))
+        image = image.resize((THUMB_WIDTH, new_h), resample=Image.Resampling.LANCZOS)
+        image.save(
+            thumb_path, "JPEG",
+            quality=THUMB_QUALITY, optimize=True, progressive=True, subsampling=0,
+        )
+
     try:
+        # Fast path: first keyframe only.
         with av.open(clip_path) as container:
             if not container.streams.video:
                 return False
-
             stream = container.streams.video[0]
             stream.codec_context.skip_frame = "NONKEY"
-
             for frame in container.decode(stream):
-                image = frame.to_image()
-                new_h = max(1, int(THUMB_WIDTH * image.height / image.width))
-                image = image.resize((THUMB_WIDTH, new_h), resample=Image.Resampling.LANCZOS)
-                image.save(
-                    thumb_path, "JPEG",
-                    quality=THUMB_QUALITY, optimize=True, progressive=True, subsampling=0,
-                )
+                _save(frame.to_image())
+                return True
+
+        # Fallback: short/smartcut clips can start mid-GOP with no early keyframe,
+        # so the NONKEY pass decodes nothing — decode the first available frame.
+        with av.open(clip_path) as container:
+            stream = container.streams.video[0]
+            for frame in container.decode(stream):
+                _save(frame.to_image())
                 return True
 
         return False
