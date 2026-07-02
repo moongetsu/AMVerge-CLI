@@ -135,9 +135,6 @@ def backend(
                     "start_sec": s["start_sec"],
                     "end_sec": s["end_sec"],
                     "path": source_str,
-                    # Deterministic jpg poster path (set upfront like production so the
-                    # grid knows it immediately); thumbnail_ready gates display until
-                    # the file lands via THUMBNAIL_READY below.
                     "thumbnail": _thumb_path(s["scene_index"]),
                     "thumbnail_ready": False,
                     "original_file": source_name,
@@ -168,18 +165,12 @@ def backend(
             scenes_out_dir = out_dir / "scenes"
             cut_by_idx: dict[int, dict] = {}
 
-            # Static poster thumbnails (production parity): a jpg first-frame per cut
-            # clip, generated the moment its clip is ready and streamed via
-            # THUMBNAIL_READY so tiles fill in progressively instead of sitting as
-            # skeletons. Runs off the cut workers on its own small pool.
             import concurrent.futures as _futures
             _thumb_pool = _futures.ThreadPoolExecutor(max_workers=4)
             _thumb_futs: list = []
 
             def _gen_thumb(idx: int, clip_path: str) -> None:
                 try:
-                    # Only signal ready when a jpg was actually written — otherwise
-                    # the tile would load a missing file and show a broken image.
                     if make_thumbnail(clip_path, _thumb_path(idx)):
                         emit_event(f"THUMBNAIL_READY|{idx}")
                     else:
@@ -235,7 +226,7 @@ def backend(
                 emit_progress_updates=False,
             )
 
-            # Drain the poster pool so the final manifest reflects which jpgs exist.
+            # drain the poster pool so the final manifest reflects which jpgs exist.
             for _f in _thumb_futs:
                 _f.result()
             _thumb_pool.shutdown(wait=True)
